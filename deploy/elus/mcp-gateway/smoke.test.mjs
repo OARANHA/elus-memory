@@ -41,6 +41,10 @@ try {
     assert.equal(r.status,401);
     assert.equal((await r.json()).error,'invalid_token');
   });
+  await test('Projects multi-bank endpoint still requires Auth0', async () => {
+    const r=await fetch(base+'/mcp/projects/',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});
+    assert.equal(r.status,401);
+  });
   await test('Other banks are not routable', async () => {
     const r=await fetch(base+'/mcp/other_bank/');
     assert.equal(r.status,404);
