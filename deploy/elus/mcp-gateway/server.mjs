@@ -11,7 +11,8 @@ const allowedSubjects = new Set((process.env.ALLOWED_AUTH0_SUBJECTS || '').split
 const keys = createRemoteJWKSet(new URL('.well-known/jwks.json', issuer));
 const metadataPath = '/.well-known/oauth-protected-resource';
 const scopedMetadataPath = metadataPath + '/mcp/' + bank;
-const gatewayResource = origin + '/mcp/' + bank + '/';
+// Auth0 Resource Parameter Compatibility maps this exact resource URI to the API audience.
+const gatewayResource = audience;
 const metadata = { resource: gatewayResource, authorization_servers: [issuer], scopes_supported: ['memory:read','memory:write'] };
 if (!apiKey || !allowedSubjects.size) throw new Error('Missing Hindsight API key or ALLOWED_AUTH0_SUBJECTS allowlist');
 
