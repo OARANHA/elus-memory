@@ -16,10 +16,16 @@ services:
     volumes:
       - hindsight_data:/home/hindsight/.pg0
     networks:
-      - elus_internal
+      elus_internal:
+      wandora_edge:
+        aliases:
+          - elus-memory-api
     # Intentionally no published ports until HTTPS and authentication are ready.
 networks:
   elus_internal:
     driver: bridge
+  wandora_edge:
+    external: true
+    name: wandora-edge
 volumes:
   hindsight_data:
