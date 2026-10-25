@@ -26,13 +26,11 @@ jobs:
           npm audit --omit=dev --audit-level=high
       - name: Build Docker image
         run: docker build -t ghcr.io/oaranha/elus-memory-mcp-gateway:sha-${{ github.sha }} deploy/elus/mcp-gateway
-      - name: Authenticate GitHub Container Registry
-        if: github.event_name == 'push'
-        uses: docker/login-action@v3
+      - name: Save staging image artifact
+        run: docker save ghcr.io/oaranha/elus-memory-mcp-gateway:sha-${{ github.sha }} | gzip > elus-memory-mcp-gateway.tar.gz
+      - name: Upload tested staging image artifact
+        uses: actions/upload-artifact@v4
         with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push immutable staging image
-        if: github.event_name == 'push'
-        run: docker push ghcr.io/oaranha/elus-memory-mcp-gateway:sha-${{ github.sha }}
+          name: elus-memory-mcp-gateway-${{ github.sha }}
+          path: elus-memory-mcp-gateway.tar.gz
+          retention-days: 7
