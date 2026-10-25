@@ -21,23 +21,6 @@ services:
         aliases:
           - elus-memory-api
     # Intentionally no published ports until HTTPS and authentication are ready.
-  mcp_gateway:
-    build:
-      context: ./mcp-gateway
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    environment:
-      PORT: "8080"
-      MEMORY_BANK: wandora_memory
-      HINDSIGHT_INTERNAL_URL: http://hindsight:8888
-      HINDSIGHT_API_TENANT_API_KEY: ${HINDSIGHT_API_TENANT_API_KEY:?Configure tenant key in Portainer}
-      ALLOWED_AUTH0_SUBJECTS: ${ALLOWED_AUTH0_SUBJECTS:?Configure authorized user IDs in Portainer}
-    depends_on:
-      - hindsight
-    networks:
-      - elus_internal
-      - wandora_edge
-    # Staged only: not publicly routed until OAuth integration tests pass.
 networks:
   elus_internal:
     driver: bridge
