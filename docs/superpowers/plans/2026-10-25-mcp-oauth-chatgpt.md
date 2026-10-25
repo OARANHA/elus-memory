@@ -76,3 +76,19 @@
 - Discovery path `/.well-known/oauth-protected-resource/mcp/wandora_memory/` returned HTTP 308 on initial request; inspect final response and advertise bank-scoped resource URL as necessary.
 - Before production enabling, select an established compatible OAuth provider. This requires the operator to provision issuer settings/credentials in the provider; do not invent secrets or deploy fake OAuth metadata.
 - Do not route /mcp to a public auth bypass; retain existing tenant-key protections until validated OAuth gateway is ready.
+
+## Auth0 discovery verified 2026-10-25
+
+User created Auth0 tenant `elus360.us.auth0.com`, API identifier `https://memo.elus360.com.br/mcp`, scopes `memory:read` and `memory:write`, enabled RBAC and Resource Parameter Compatibility Profile (user-confirmed; RBAC and toggle not independently inspected).
+
+Live GET to `https://elus360.us.auth0.com/.well-known/openid-configuration` returned:
+- issuer: `https://elus360.us.auth0.com/` (trailing slash significant)
+- authorization endpoint: `https://elus360.us.auth0.com/authorize`
+- token endpoint: `https://elus360.us.auth0.com/oauth/token`
+- JWKS: `https://elus360.us.auth0.com/.well-known/jwks.json`
+- PKCE: `S256` supported
+- client ID metadata support and DCR registration endpoint: NOT advertised at inspection time
+
+**Next requirement:** Enable Auth0 **Client ID Metadata Document (CIMD) Registration** in Tenant Settings > Advanced, then recheck OIDC discovery; manually import the *actual* ChatGPT CIMD document URL displayed when defining the ChatGPT connector (do not guess callback-ID-dependent URL). Avoid enabling open DCR for private use. Use per-application API grants, not default third-party grants. See OpenAI MCPKit Auth0 guide in `https://github.com/openai/openai-mcpkit/blob/main/python-authenticated-mcp-server-scaffold/README.md`.
+
+Until a tested JWT-validating gateway handles `/.well-known/oauth-protected-resource` and bank-scoped `/mcp/wandora_memory/`, do not deploy new Traefik routes or claim OAuth completion.
