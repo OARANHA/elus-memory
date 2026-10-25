@@ -16,6 +16,7 @@ const gatewayResource = audience;
 const metadata = { resource: gatewayResource, authorization_servers: [issuer], scopes_supported: ['memory:read','memory:write'] };
 if (!apiKey || !allowedSubjects.size) throw new Error('Missing Hindsight API key or ALLOWED_AUTH0_SUBJECTS allowlist');
 
+const audit = (stage, status) => console.info(JSON.stringify({component:'elus-mcp',stage,status}));
 const send = (res, status, obj, headers={}) => { res.writeHead(status, {'content-type':'application/json', 'cache-control':'no-store',...headers});res.end(JSON.stringify(obj)); };
 const challenge = () => 'Bearer resource_metadata="' + origin + scopedMetadataPath + '", scope="memory:read memory:write"';
 
@@ -26,16 +27,16 @@ http.createServer(async (req,res) => {
     if (req.method==='GET' && path==='/__elus_gateway_health') return send(res,200,{status:'ok'});
     if (!(path==='/mcp/'+bank || path==='/mcp/'+bank+'/')) return send(res,404,{error:'not_found'});
     const bearer = /^Bearer (.+)$/i.exec(req.headers.authorization || '');
-    if (!bearer) return send(res,401,{error:'unauthorized'},{'www-authenticate':challenge()});
+    if (!bearer) { audit('missing_bearer',401); return send(res,401,{error:'unauthorized'},{'www-authenticate':challenge()}); }
     let payload;
     try {
       ({payload}=await jwtVerify(bearer[1],keys,{issuer,audience,algorithms:['RS256'],clockTolerance:5}));
     } catch {
-      return send(res,401,{error:'invalid_token'},{'www-authenticate':challenge()});
+      audit('invalid_token',401); return send(res,401,{error:'invalid_token'},{'www-authenticate':challenge()});
     }
-    if (!allowedSubjects.has(payload.sub)) return send(res,403,{error:'account_not_allowed'});
+    if (!allowedSubjects.has(payload.sub)) { audit('subject_denied',403); return send(res,403,{error:'account_not_allowed'}); }
     const scopes = new Set(String(payload.scope || '').split(/\s+/));
-    if (!scopes.has('memory:read') || !scopes.has('memory:write')) return send(res,403,{error:'insufficient_scope'});
+    if (!scopes.has('memory:read') || !scopes.has('memory:write')) { audit('scope_denied',403); return send(res,403,{error:'insufficient_scope'}); }
     const headers = {};
     for(const key of ['content-type','accept','mcp-session-id','mcp-protocol-version','last-event-id']) {
       if(req.headers[key]) headers[key]=req.headers[key];
@@ -46,10 +47,12 @@ http.createServer(async (req,res) => {
     const response = await fetch(target,{method:req.method,headers,body:['GET','HEAD'].includes(req.method)?undefined:req,duplex:'half',signal:controller.signal,redirect:'manual'});
     const outHeaders={};
     for (const [k,v] of response.headers) if(!['transfer-encoding','connection','content-length','set-cookie'].includes(k)) outHeaders[k]=v;
+    audit('upstream_response',response.status);
     res.writeHead(response.status,outHeaders);
     if (response.body) for await (const chunk of response.body) res.write(chunk);
     res.end();
   } catch(e) {
+    audit('upstream_failure',502);
     if(!res.headersSent) send(res,502,{error:'upstream_failure'});
     else res.destroy();
   }
