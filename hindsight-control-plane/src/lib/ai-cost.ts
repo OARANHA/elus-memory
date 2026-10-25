@@ -37,10 +37,12 @@ export interface CostSummary {
 export function estimateCost(
   entries: readonly LLMRequestEntry[],
   rates: readonly ModelRate[] = MODEL_RATES,
+  bankId?: string,
 ): CostSummary {
   const byModel = new Map<string, CostSummary["rows"][number]>();
   let inputUsd = 0, outputUsd = 0, cacheUsd = 0, pricedCalls = 0, unknownCalls = 0;
   for (const entry of entries) {
+    if (bankId && entry.bank_id !== bankId) continue;
     const provider = entry.provider?.trim().toLowerCase() ?? "";
     const model = entry.model?.trim() ?? "";
     const rate = rates.find((r) => r.provider.toLowerCase() === provider && r.model === model);
