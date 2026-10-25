@@ -14,6 +14,7 @@ import { formatRelativeTime, formatAbsoluteDateTime } from "@/lib/relative-time"
 import { MemoryStoreCard, MemoriesActivityChart, type BankStats } from "./bank-stats-view";
 import { TreeRow } from "./knowledge-base-view";
 import { useFeatures } from "@/lib/features-context";
+import { AiCostCard } from "./ai-cost-card";
 
 const FALLBACK_COLOR = "#0074d9";
 // The dashboard constellation is a glanceable memory map, not the full graph
@@ -317,6 +318,8 @@ export function HomeView({
           </div>
         </div>
       </div>
+
+      <AiCostCard bankId={bankId} enabled={features?.llm_trace ?? false} />
 
       {/* Memory stats demoted below the constellation + knowledge/docs. */}
       {stats && (
