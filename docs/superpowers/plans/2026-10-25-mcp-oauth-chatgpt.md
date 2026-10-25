@@ -2,11 +2,11 @@
 
 > For agentic workers: use superpowers:executing-plans task-by-task with independent verification.
 
-**Goal:** Connect ChatGPT to the self-hosted Hindsight at https://memo.elus360.com.br/mcp/ using OAuth backed by Wandora Keycloak, without exposing bank data anonymously.
+**Goal:** Connect ChatGPT to the self-hosted Hindsight at https://memo.elus360.com.br/mcp/ using standards-compliant OAuth without requiring Keycloak, without exposing bank data anonymously.
 
-**Architecture:** Keep Hindsight's Control Plane (port 9999) and API (port 8888) unchanged. Place a small OAuth-aware MCP gateway in front of the MCP API; validate Keycloak tokens and scope/bank access, then forward to Hindsight with the existing tenant API key held server-side only. Traefik routes /mcp and OAuth protected-resource metadata to the gateway; other routes retain the current panel behavior.
+**Architecture:** Keep Hindsight's Control Plane (port 9999) and API (port 8888) unchanged. Place a small OAuth-aware MCP gateway in front of the MCP API; validate OAuth provider tokens and scope/bank access, then forward to Hindsight with the existing tenant API key held server-side only. Traefik routes /mcp and OAuth protected-resource metadata to the gateway; other routes retain the current panel behavior.
 
-**Tech stack:** Hindsight v1.1.0, Docker Compose (Portainer Repository), Traefik file provider, Keycloak OIDC, HTTPS (Cloudflare).
+**Tech stack:** Hindsight v1.1.0, Docker Compose (Portainer Repository), Traefik file provider, OIDC/OAuth authorization provider, HTTPS (Cloudflare).
 
 **Spec:** existing ELUS Memory deployment at deploy/elus/compose.yaml and OpenAI OAuth MCP auth requirements: https://developers.openai.com/plugins/build/auth
 
@@ -16,7 +16,7 @@
 - Keep existing volume hindsight_data and functioning panel.
 - Do not replace active Traefik routes before a tested gateway exists.
 - Allowlist bank IDs per authenticated subject/client; `wandora_memory` is the local bank.
-- Exact Keycloak issuer, registered OAuth client, audience, scopes, and certificate/JWKS must be verified live before deployment.
+- Exact OAuth issuer, registered OAuth client, audience, scopes, and certificate/JWKS must be verified live before deployment.
 - ChatGPT uses OAuth authorization-code with PKCE S256, supported client registration/metadata, issuer consistency and resource parameter binding.
 - On failed auth return 401 + WWW-Authenticate Bearer challenge pointing to protected-resource metadata.
 - Unauthenticated MCP tools/list and calls must fail; expired/wrong-audience/wrong-scope tokens must fail.
@@ -31,9 +31,9 @@
 
 ## Tasks
 
-### Task 1 — Verify Keycloak and record integration settings
+### Task 1 — Select verified OAuth provider and record integration settings
 
-- [ ] Inspect current Keycloak realm issuer discovery/JWKS and verify audience and token registration capabilities (DCR or CIMD/predefined).
+- [ ] For private MVP, prioritize a mature OAuth authorization provider supporting MCP, PKCE S256 and CIMD or DCR; inspect its issuer discovery/JWKS and verify audience and registration capabilities. Do not require Keycloak.
 - [ ] Verify chatgpt callback URL and PKCE S256 compatibility. Never guess URLs or secrets.
 - [ ] Document verified values in deploy/elus/oauth-integration.md (no secrets).
 - [ ] Verify discovery endpoints return valid metadata and TLS passes.
@@ -42,7 +42,7 @@
 
 - [ ] Create isolated gateway service under deploy/elus/mcp-gateway with JWT verification (JWKS, iss, aud, exp, scopes), bank ACLs, WWW-Authenticate challenges, and protected-resource metadata.
 - [ ] Write negative tests for invalid/missing/expired/wrong-audience/wrong-scope tokens and forbidden banks; run RED then GREEN.
-- [ ] Write positive test with Keycloak test identity and no exposure of the internal Hindsight key.
+- [ ] Write positive test with authorized test identity and no exposure of the internal Hindsight key.
 - [ ] Validate actual MCP initialize and tools/list with user-scoped OAuth bearer.
 
 ### Task 3 — Wire Repository stack and Traefik
@@ -66,4 +66,13 @@
 - Portainer connector is configured at https://portainer.wandora.com.br, Stack ID 12, repository OARANHA/elus-memory.
 - Panel root returns HTTP 307 to /login; unauthenticated POST /mcp/ returned 401 in prior validated test.
 - GET https://memo.elus360.com.br/.well-known/oauth-protected-resource currently returns HTTP 307 to /login, not required JSON.
-- The gateway and Keycloak OAuth integration have NOT yet been deployed.
+- The gateway and OAuth integration has NOT yet been deployed.
+
+## Product decision and live check (2026-10-25)
+
+- Scope NOW: only project operators; no public signup, no billing, no multi-tenant rollout yet. Preserve future per-account bank isolation design.
+- The ChatGPT OAuth client must discover valid protected-resource and authorization-server metadata; do not equate Hindsight API-key auth with OAuth.
+- Official Hindsight self-hosted MCP path is `/mcp/{bank_id}/`; use `https://memo.elus360.com.br/mcp/wandora_memory/` for the private bank. It currently returns HTTP 200 to an unauthenticated GET (which may be a transport response; GET alone does not prove a data exposure). Earlier unauthenticated POST to `/mcp/` returned 401.
+- Discovery path `/.well-known/oauth-protected-resource/mcp/wandora_memory/` returned HTTP 308 on initial request; inspect final response and advertise bank-scoped resource URL as necessary.
+- Before production enabling, select an established compatible OAuth provider. This requires the operator to provision issuer settings/credentials in the provider; do not invent secrets or deploy fake OAuth metadata.
+- Do not route /mcp to a public auth bypass; retain existing tenant-key protections until validated OAuth gateway is ready.
