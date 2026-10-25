@@ -36,7 +36,7 @@ http.createServer(async (req,res) => {
       audit('invalid_token',401); return send(res,401,{error:'invalid_token'},{'www-authenticate':challenge()});
     }
     if (!allowedSubjects.has(payload.sub)) { audit('subject_denied',403); return send(res,403,{error:'account_not_allowed'}); }
-    const scopes = new Set(String(payload.scope || '').split(/\s+/));
+    const scopes = new Set([...String(payload.scope || '').split(/\s+/), ...(Array.isArray(payload.permissions) ? payload.permissions : [])]);
     if (!scopes.has('memory:read') || !scopes.has('memory:write')) { audit('scope_denied',403); return send(res,403,{error:'insufficient_scope'}); }
     const headers = {};
     for(const key of ['content-type','accept','mcp-session-id','mcp-protocol-version','last-event-id']) {
