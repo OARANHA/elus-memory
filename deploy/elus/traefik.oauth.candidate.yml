@@ -1,4 +1,4 @@
-# ELUS Memory OAuth routing candidate — DO NOT INSTALL before gateway rollout.
+# ELUS Memory OAuth routing candidate — DO NOT ACTIVATE MCP switch before token tests.
 # Keep the existing panel host router unchanged; the MCP API path will be
 # redirected to a private JWT-verifying gateway only after staging tests.
 http:
@@ -29,7 +29,7 @@ http:
     elus-memory-mcp-gateway:
       loadBalancer:
         servers:
-          - url: "http://elus-memory-mcp_gateway-1:8080"
+          - url: "http://elus-memory-oauth:8080"
     elus-memory-panel:
       loadBalancer:
         servers:
