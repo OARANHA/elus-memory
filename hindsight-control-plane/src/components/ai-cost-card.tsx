@@ -33,8 +33,8 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
       }
       if (!cancelled) {
         setState({
-          today: estimateCost(entries.filter((e) => e.started_at && new Date(e.started_at) >= today)),
-          month: estimateCost(entries),
+          today: estimateCost(entries.filter((e) => e.started_at && new Date(e.started_at) >= today), undefined, bankId),
+          month: estimateCost(entries, undefined, bankId),
           partial: total > entries.length,
         });
       }
