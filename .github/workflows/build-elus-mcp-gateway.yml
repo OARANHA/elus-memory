@@ -1,0 +1,38 @@
+name: Build ELUS Memory MCP gateway (staging)
+on:
+  push:
+    branches: [main]
+    paths:
+      - "deploy/elus/mcp-gateway/**"
+      - ".github/workflows/build-elus-mcp-gateway.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+  packages: write
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check gateway syntax
+        run: node --check deploy/elus/mcp-gateway/server.mjs
+      - name: Install and audit production dependencies
+        working-directory: deploy/elus/mcp-gateway
+        run: |
+          npm install --ignore-scripts
+          npm audit --omit=dev --audit-level=high
+      - name: Build Docker image
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/elus-memory-mcp-gateway:sha-${{ github.sha }} deploy/elus/mcp-gateway
+      - name: Authenticate GitHub Container Registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push immutable staging image
+        if: github.event_name == 'push'
+        run: docker push ghcr.io/${{ github.repository_owner }}/elus-memory-mcp-gateway:sha-${{ github.sha }}
