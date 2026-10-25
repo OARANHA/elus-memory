@@ -12,17 +12,9 @@ export interface ModelRate {
 }
 
 /** Intentionally explicit: unknown provider/model combinations are never charged at $0. */
-export const MODEL_RATES: readonly ModelRate[] = [
-  {
-    provider: "deepinfra",
-    model: "deepseek-ai/DeepSeek-V4-Flash-0731",
-    input: 0.08,
-    output: 0.18,
-    cachedInput: 0.02,
-    source: "https://llmproviders.ai/api/pricing/deepinfra",
-    checkedAt: "2026-10-25",
-  },
-];
+export const MODEL_RATES: readonly ModelRate[] = [];
+// Rates are deliberately unset until an authoritative model-specific price is
+// verified. An unverifiable price must not masquerade as a trustworthy cost.
 
 export interface CostSummary {
   knownUsd: number;
