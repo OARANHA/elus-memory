@@ -5,7 +5,7 @@ const issuer = 'https://elus360.us.auth0.com/';
 const audience = 'https://memo.elus360.com.br/mcp';
 const origin = 'https://memo.elus360.com.br';
 const bank = process.env.MEMORY_BANK || 'wandora_memory';
-const upstream = process.env.HINDSIGHT_INTERNAL_URL || 'http://hindsight:8888';
+const upstream = process.env.HINDSIGHT_INTERNAL_URL || 'http://elus-memory-api:8888';
 const apiKey = process.env.HINDSIGHT_API_TENANT_API_KEY;
 const allowedSubjects = new Set((process.env.ALLOWED_AUTH0_SUBJECTS || '').split(',').map(x => x.trim()).filter(Boolean));
 const keys = createRemoteJWKSet(new URL('.well-known/jwks.json', issuer));
