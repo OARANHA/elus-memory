@@ -25,7 +25,7 @@ jobs:
           npm install --ignore-scripts
           npm audit --omit=dev --audit-level=high
       - name: Build Docker image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/elus-memory-mcp-gateway:sha-${{ github.sha }} deploy/elus/mcp-gateway
+        run: docker build -t ghcr.io/oaranha/elus-memory-mcp-gateway:sha-${{ github.sha }} deploy/elus/mcp-gateway
       - name: Authenticate GitHub Container Registry
         if: github.event_name == 'push'
         uses: docker/login-action@v3
@@ -35,4 +35,4 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Push immutable staging image
         if: github.event_name == 'push'
-        run: docker push ghcr.io/${{ github.repository_owner }}/elus-memory-mcp-gateway:sha-${{ github.sha }}
+        run: docker push ghcr.io/oaranha/elus-memory-mcp-gateway:sha-${{ github.sha }}
