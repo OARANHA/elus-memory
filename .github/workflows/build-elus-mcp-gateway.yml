@@ -29,6 +29,9 @@ jobs:
         run: npm test
       - name: Build Docker image
         run: docker build -t ghcr.io/oaranha/elus-memory-mcp-gateway:sha-${{ github.sha }} deploy/elus/mcp-gateway
+      - name: Verify image works as unprivileged node user
+        run: |
+          docker run --rm --entrypoint node ghcr.io/oaranha/elus-memory-mcp-gateway:sha-${{ github.sha }} --check /app/server.mjs
       - name: Save staging image artifact
         run: docker save ghcr.io/oaranha/elus-memory-mcp-gateway:sha-${{ github.sha }} | gzip > elus-memory-mcp-gateway.tar.gz
       - name: Upload tested staging image artifact
