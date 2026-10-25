@@ -1,0 +1,36 @@
+# ELUS Memory OAuth routing candidate — DO NOT INSTALL before gateway rollout.
+# Keep the existing panel host router unchanged; the MCP API path will be
+# redirected to a private JWT-verifying gateway only after staging tests.
+http:
+  routers:
+    elus-memory-oauth-resource:
+      rule: "Host(`memo.elus360.com.br`) && (Path(`/.well-known/oauth-protected-resource`) || PathPrefix(`/.well-known/oauth-protected-resource/`))"
+      entryPoints: [websecure]
+      priority: 200
+      tls:
+        certResolver: letsencrypt
+      service: elus-memory-mcp-gateway
+    elus-memory-mcp:
+      rule: "Host(`memo.elus360.com.br`) && PathPrefix(`/mcp/`)"
+      entryPoints: [websecure]
+      priority: 100
+      tls:
+        certResolver: letsencrypt
+      service: elus-memory-mcp-gateway
+    elus-memory-panel:
+      rule: "Host(`memo.elus360.com.br`)"
+      entryPoints: [websecure]
+      priority: 10
+      tls:
+        certResolver: letsencrypt
+      service: elus-memory-panel
+
+  services:
+    elus-memory-mcp-gateway:
+      loadBalancer:
+        servers:
+          - url: "http://elus-memory-mcp_gateway-1:8080"
+    elus-memory-panel:
+      loadBalancer:
+        servers:
+          - url: "http://elus-memory-api:9999"
