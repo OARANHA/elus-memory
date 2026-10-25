@@ -1,0 +1,22 @@
+name: Import Basic Memory upstream
+on:
+  push:
+    paths:
+      - .github/workflows/import-upstream.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  import:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mirror upstream main and tags
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone --mirror https://github.com/basicmachines-co/basic-memory.git upstream.git
+          cd upstream.git
+          git remote set-url --push origin "https://x-access-token:${GH_TOKEN}@github.com/OARANHA/elus-memory.git"
+          git push origin refs/heads/main:refs/heads/main --force
+          git push origin 'refs/tags/*:refs/tags/*'
