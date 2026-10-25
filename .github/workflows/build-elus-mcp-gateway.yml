@@ -24,6 +24,9 @@ jobs:
         run: |
           npm install --ignore-scripts
           npm audit --omit=dev --audit-level=high
+      - name: Run isolated gateway security smoke tests
+        working-directory: deploy/elus/mcp-gateway
+        run: npm test
       - name: Build Docker image
         run: docker build -t ghcr.io/oaranha/elus-memory-mcp-gateway:sha-${{ github.sha }} deploy/elus/mcp-gateway
       - name: Save staging image artifact
