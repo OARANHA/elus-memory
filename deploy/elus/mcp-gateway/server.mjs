@@ -26,6 +26,7 @@ http.createServer(async (req,res) => {
     if (req.method==='GET' && (path===metadataPath || path===metadataPath+'/' || path===scopedMetadataPath || path===scopedMetadataPath+'/')) return send(res,200,metadata);
     if (req.method==='GET' && path==='/__elus_gateway_health') return send(res,200,{status:'ok'});
     if (!(path==='/mcp/'+bank || path==='/mcp/'+bank+'/')) return send(res,404,{error:'not_found'});
+    console.info(JSON.stringify({component:'elus-mcp',stage:'request',method:req.method,authorized: Boolean(req.headers.authorization),protocol:req.headers['mcp-protocol-version']||null}));
     const bearer = /^Bearer (.+)$/i.exec(req.headers.authorization || '');
     if (!bearer) { audit('missing_bearer',401); return send(res,401,{error:'unauthorized'},{'www-authenticate':challenge()}); }
     let payload;
