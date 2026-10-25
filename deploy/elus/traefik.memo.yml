@@ -1,0 +1,30 @@
+# ELUS Memory: Traefik FILE provider configuration
+# Install only after validating the cp key prompt and bearer token rejection.
+http:
+  routers:
+    elus-memory-mcp:
+      rule: "Host(`memo.elus360.com.br`) && PathPrefix(`/mcp`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      service: elus-memory-api
+      priority: 100
+    elus-memory-panel:
+      rule: "Host(`memo.elus360.com.br`)"
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      service: elus-memory-panel
+      priority: 10
+
+  services:
+    elus-memory-api:
+      loadBalancer:
+        servers:
+          - url: "http://elus-memory-api:8888"
+    elus-memory-panel:
+      loadBalancer:
+        servers:
+          - url: "http://elus-memory-api:9999"
