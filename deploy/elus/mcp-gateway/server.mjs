@@ -11,6 +11,8 @@ const allowedSubjects = new Set((process.env.ALLOWED_AUTH0_SUBJECTS || '').split
 const keys = createRemoteJWKSet(new URL('.well-known/jwks.json', issuer));
 const metadataPath = '/.well-known/oauth-protected-resource';
 const scopedMetadataPath = metadataPath + '/mcp/' + bank;
+const projectsPath = '/mcp/projects';
+const projectsMetadataPath = metadataPath + projectsPath;
 // Auth0 Resource Parameter Compatibility maps this exact resource URI to the API audience.
 const gatewayResource = audience;
 const metadata = { resource: gatewayResource, authorization_servers: [issuer], scopes_supported: ['memory:read','memory:write'] };
@@ -23,9 +25,10 @@ const challenge = () => 'Bearer resource_metadata="' + origin + scopedMetadataPa
 http.createServer(async (req,res) => {
   try {
     const path = new URL(req.url, origin).pathname;
-    if (req.method==='GET' && (path===metadataPath || path===metadataPath+'/' || path===scopedMetadataPath || path===scopedMetadataPath+'/')) return send(res,200,metadata);
+    if (req.method==='GET' && (path===metadataPath || path===metadataPath+'/' || path===scopedMetadataPath || path===scopedMetadataPath+'/' || path===projectsMetadataPath || path===projectsMetadataPath+'/')) return send(res,200,metadata);
     if (req.method==='GET' && path==='/__elus_gateway_health') return send(res,200,{status:'ok'});
-    if (!(path==='/mcp/'+bank || path==='/mcp/'+bank+'/')) return send(res,404,{error:'not_found'});
+    const isProjectAdmin = path===projectsPath || path===projectsPath+'/';
+    if (!(isProjectAdmin || path==='/mcp/'+bank || path==='/mcp/'+bank+'/')) return send(res,404,{error:'not_found'});
     console.info(JSON.stringify({component:'elus-mcp',stage:'request',method:req.method,authorized: Boolean(req.headers.authorization),protocol:req.headers['mcp-protocol-version']||null}));
     const bearer = /^Bearer (.+)$/i.exec(req.headers.authorization || '');
     if (!bearer) { audit('missing_bearer',401); return send(res,401,{error:'unauthorized'},{'www-authenticate':challenge()}); }
@@ -43,7 +46,9 @@ http.createServer(async (req,res) => {
       if(req.headers[key]) headers[key]=req.headers[key];
     }
     headers.authorization='Bearer '+apiKey;
-    const target = new URL(path,upstream);
+    // The multi-bank Hindsight endpoint requires explicit bank_id on each tool.
+    // Expose it only through the separately routed, Auth0-allowlisted projects path.
+    const target = new URL(isProjectAdmin ? '/mcp/' : path,upstream);
     const controller = new AbortController();
     const response = await fetch(target,{method:req.method,headers,body:['GET','HEAD'].includes(req.method)?undefined:req,duplex:'half',signal:controller.signal,redirect:'manual'});
     const outHeaders={};
