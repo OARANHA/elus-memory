@@ -29,5 +29,6 @@ jobs:
           git add -A
           if ! git diff --cached --quiet; then
             git commit -m "chore: import upstream Hindsight source"
+            git pull --rebase origin main
             git push origin HEAD:main
           fi
