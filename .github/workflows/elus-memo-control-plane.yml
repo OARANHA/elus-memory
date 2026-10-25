@@ -1,0 +1,40 @@
+name: Elus Memo Control Plane CI
+
+on:
+  pull_request:
+    paths:
+      - "hindsight-control-plane/**"
+      - "hindsight-clients/typescript/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/elus-memo-control-plane.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hindsight-control-plane/**"
+      - "hindsight-clients/typescript/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/elus-memo-control-plane.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  control-plane:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked workspace dependencies
+        run: npm ci --ignore-scripts
+      - name: TypeScript
+        run: npm exec --workspace=@vectorize-io/hindsight-control-plane -- tsc --noEmit
+      - name: ESLint
+        run: npm run lint --workspace=@vectorize-io/hindsight-control-plane
+      - name: Unit tests
+        run: npm run test --workspace=@vectorize-io/hindsight-control-plane
