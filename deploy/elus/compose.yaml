@@ -1,0 +1,20 @@
+# ELUS Memory self-hosted Hindsight (private until authentication is configured)
+services:
+  hindsight:
+    image: ghcr.io/vectorize-io/hindsight:${HINDSIGHT_VERSION:-latest}
+    restart: unless-stopped
+    environment:
+      HINDSIGHT_API_LLM_PROVIDER: ${HINDSIGHT_API_LLM_PROVIDER:-openai}
+      HINDSIGHT_API_LLM_BASE_URL: ${HINDSIGHT_API_LLM_BASE_URL:-https://llm.chutes.ai/v1}
+      HINDSIGHT_API_LLM_MODEL: ${HINDSIGHT_API_LLM_MODEL:-}
+      HINDSIGHT_API_LLM_API_KEY: ${HINDSIGHT_API_LLM_API_KEY:-}
+    volumes:
+      - hindsight_data:/home/hindsight/.pg0
+    networks:
+      - elus_internal
+    # Intentionally no published ports until HTTPS and authentication are ready.
+networks:
+  elus_internal:
+    driver: bridge
+volumes:
+  hindsight_data:
