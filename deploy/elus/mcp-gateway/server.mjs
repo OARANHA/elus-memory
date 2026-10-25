@@ -10,16 +10,19 @@ const apiKey = process.env.HINDSIGHT_API_TENANT_API_KEY;
 const allowedSubjects = new Set((process.env.ALLOWED_AUTH0_SUBJECTS || '').split(',').map(x => x.trim()).filter(Boolean));
 const keys = createRemoteJWKSet(new URL('.well-known/jwks.json', issuer));
 const metadataPath = '/.well-known/oauth-protected-resource';
-const metadata = { resource: audience, authorization_servers: [issuer], scopes_supported: ['memory:read','memory:write'] };
+const scopedMetadataPath = metadataPath + '/mcp/' + bank;
+const gatewayResource = origin + '/mcp/' + bank + '/';
+const metadata = { resource: gatewayResource, authorization_servers: [issuer], scopes_supported: ['memory:read','memory:write'] };
 if (!apiKey || !allowedSubjects.size) throw new Error('Missing Hindsight API key or ALLOWED_AUTH0_SUBJECTS allowlist');
 
 const send = (res, status, obj, headers={}) => { res.writeHead(status, {'content-type':'application/json', 'cache-control':'no-store',...headers});res.end(JSON.stringify(obj)); };
-const challenge = () => 'Bearer resource_metadata="' + origin + metadataPath + '", scope="memory:read memory:write"';
+const challenge = () => 'Bearer resource_metadata="' + origin + scopedMetadataPath + '", scope="memory:read memory:write"';
 
 http.createServer(async (req,res) => {
   try {
     const path = new URL(req.url, origin).pathname;
-    if (req.method==='GET' && (path===metadataPath || path===metadataPath+'/')) return send(res,200,metadata);
+    if (req.method==='GET' && (path===metadataPath || path===metadataPath+'/' || path===scopedMetadataPath || path===scopedMetadataPath+'/')) return send(res,200,metadata);
+    if (req.method==='GET' && path==='/__elus_gateway_health') return send(res,200,{status:'ok'});
     if (!(path==='/mcp/'+bank || path==='/mcp/'+bank+'/')) return send(res,404,{error:'not_found'});
     const bearer = /^Bearer (.+)$/i.exec(req.headers.authorization || '');
     if (!bearer) return send(res,401,{error:'unauthorized'},{'www-authenticate':challenge()});
