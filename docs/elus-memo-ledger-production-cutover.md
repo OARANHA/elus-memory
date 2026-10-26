@@ -93,3 +93,9 @@ docker inspect CONTÊINER --format '{{json .Mounts}}' | jq '[.[] | {Type,Name,De
 - Trigger transacional: INSERT sintético 1 ledger, ROLLBACK => 12.311 traces e zero ledger, GREEN.
 - Backfill de 100 traces: primeiro INSERT 100; replay 0; ROLLBACK => zero ledger, GREEN.
 - Downgrade → predecessor preservou linha de ledger, removeu trigger; reupgrade reinstalou trigger; linha sintética apagada após teste: GREEN. **Ainda requer reconciliação final de contagens/revisões no clone e gates de implantação; nenhum deploy executado.**
+
+## Produção — migration aplicada (relato terminal de 26/10/2026)
+- Operador executou o script de migração com código da PR #7 montado read-only, conectado ao container produtivo e autenticação a partir de `instance.json` sem expor senha.
+- Backup verificado `sha256sum -c`: OK. Revisão anterior: `c7e2f9a4d1b8`, traces anteriores: 12.497.
+- Script confirmou revisão `e1u5c0st2026`, `public.elus_usage_ledger` existente e trigger `trg_elus_usage_ledger_insert` ativo, emitindo `ELUS_MEMO_PRODUCAO_GREEN`.
+- **SQL de produção alterado** apesar de PR #7 ainda em draft; alinhar fonte/código em main no procedimento subsequente. Sem backfill histórico, sem precificação/card por este comando. Verificação observacional de novos inserts/saúde ainda pendente.
