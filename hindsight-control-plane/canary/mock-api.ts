@@ -56,7 +56,7 @@ export const client = {
         output_tokens: sum(items, "output_tokens"), cached_tokens: sum(items, "cached_tokens"),
         missing_usage: 0 },
       coverage: { earliest: items[0]?.started_at ?? null,
-        latest: items.at(-1)?.started_at ?? null, historical_backfill_confirmed: false },
+        latest: items.at(-1)?.started_at ?? null, historical_backfill_confirmed: false, retained_traces: items.length, unreconciled_traces: 0, retained_traces_reconciled: true, earliest_retained_trace: items[0]?.started_at ?? null },
       models_truncated: false,
       daily: [...byDay].sort(([a], [b]) => a.localeCompare(b)).map(([day, calls]) => ({ day, calls })),
       models: [...grouped].map(([key, rows]) => {
