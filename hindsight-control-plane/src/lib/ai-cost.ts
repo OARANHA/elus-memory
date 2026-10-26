@@ -86,8 +86,19 @@ export function estimateCost(
     const model = entry.model?.trim() ?? "";
     // Providers sometimes prefix model IDs with a namespace (org/model).
     // Match only the final segment, never fuzzy substrings, to avoid mixing variants.
-    const modelName = model.split("/").at(-1)?.toLowerCase() ?? "";
-    const rate = rates.find((r) => r.provider.toLowerCase() === provider && r.model.toLowerCase() === modelName);
+    const modelId = model.toLowerCase();
+    const exactRate = rates.find(
+      (r) => r.provider.toLowerCase() === provider && r.model.toLowerCase() === modelId,
+    );
+    const suffix = modelId.split("/").at(-1) ?? "";
+    // Prefer the exact identifier. Only resolve a namespace suffix when unique;
+    // ambiguous aliases must remain unpriced rather than selecting a wrong rate.
+    const suffixRates = exactRate
+      ? []
+      : rates.filter(
+          (r) => r.provider.toLowerCase() === provider && r.model.toLowerCase() === suffix,
+        );
+    const rate = exactRate ?? (suffixRates.length === 1 ? suffixRates[0] : undefined);
     const input = entry.input_tokens;
     const output = entry.output_tokens;
     const cached = entry.cached_tokens ?? 0;
