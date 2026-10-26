@@ -28,3 +28,14 @@
 
 ## Estado de autorização
 Documento de planejamento, **não autoriza** iniciar comandos de escrita no PostgreSQL/volume de produção. Solicitar autorização explícita para a janela e backup do banco real quando todos os requisitos de leitura e capacidade estiverem confirmados.
+
+## Reconciliação Portainer (verificada em 26/10/2026)
+- `portainer_status`: Portainer 2.45.0 em `https://portainer.wandora.com.br`.
+- `portainer_endpoints_list`: endpoint **ID 3**, nome **`local`**, tipo Docker standalone (Type 1), Status 1.
+- `portainer_stack_get(12)`: stack `elus-memory`, status 1, `EndpointId=3`, branch GitOps `refs/heads/main`, `ConfigHash=ffe55c8c257e6f8f13ea8223d0edc4f91b669619`, compose `deploy/elus/compose.yaml`. A instância possui 16 variáveis de stack configuradas, mantidas redigidas.
+- `portainer_stacks_list`: existe também stack `elus-memory-oauth` ID 13, endpoint 3. Não confundir com volume/banco do serviço Hindsight.
+- A listagem Docker `wandora-agent` inclui outros serviços Wandora, **não** inclui o Hindsight; essa fonte **não comprova** saúde, mounts ou localização física da stack `elus-memory`.
+- A conexão disponível com Portainer expõe metadados de stack e endpoints, mas **não** disponibilizou operação de inspect de contêiner/volumes do endpoint 3 nesta sessão. Portanto, o caminho `.pg0` é o caminho definido no Compose, ainda **não verificado** como mount efetivo de um contêiner em execução.
+
+### Gate de evidência antes do backup real
+Usar uma capacidade explicitamente autorizada de **leitura** do Docker endpoint 3, ou a interface Portainer, para obter apenas: ID/nome do contêiner da stack 12, labels, imagem/digest, status/health, mounts (tipo, origem nomeada/destino), modo read-write, versão do PostgreSQL embarcado, espaço livre e contagem de schemas/traces sem conteúdo. Não executar `docker cp`, comandos SQL de mutação, snapshot, `pg_dump`, restart ou redeploy enquanto não houver plano autorizado de backup seguro.
