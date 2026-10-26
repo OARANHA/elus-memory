@@ -1,4 +1,4 @@
-import type { LLMRequestEntry } from "../src/lib/api";
+import type { LLMRequestEntry, LLMRequestsResponse } from "../src/lib/api";
 
 function trace(id: string, bank: string, model: string, started: string): LLMRequestEntry {
   return {
@@ -10,15 +10,46 @@ function trace(id: string, bank: string, model: string, started: string): LLMReq
     input: null, output: null, error: null, llm_info: {}, metadata: {},
   };
 }
-const today = new Date().toISOString();
+
+const now = new Date();
+const today = now.toISOString();
+const yesterday = new Date(now.getTime() - 86400000).toISOString();
+const knownModel = "deepseek-ai/DeepSeek-V4-Flash-0731";
+const fixture = (bankId: string): LLMRequestEntry[] => {
+  if (bankId === "unpriced") return [trace("unknown-1", bankId, "unknown-model", today)];
+  if (bankId === "empty") return [];
+  if (bankId === "paginated") {
+    return [
+      trace("p1", bankId, knownModel, today),
+      trace("p2", bankId, "unpriced-variant", yesterday),
+      trace("p3", bankId, knownModel, today),
+      trace("p4", bankId, knownModel, yesterday),
+    ];
+  }
+  return [
+    trace("known-1", bankId, knownModel, today),
+    trace("unknown-2", bankId, "unpriced-variant", today),
+  ];
+};
+
+// Match the existing paginated endpoint shape, without network access or secrets.
+// The miniature pages exercise the real card's paging loop rather than handing it all rows.
 export const client = {
-  async listLLMRequests(bankId: string) {
-    const items = bankId === "unpriced"
-      ? [trace("unknown-1", bankId, "unknown-model", today)]
-      : [
-          trace("known-1", bankId, "DeepSeek-V4-Flash-0731", today),
-          trace("unknown-2", bankId, "unpriced-variant", today),
-        ];
-    return { bank_id: bankId, total: items.length, limit: 100, offset: 0, items };
+  async listLLMRequests(
+    bankId: string,
+    options?: { start_date?: string; limit?: number; offset?: number },
+  ): Promise<LLMRequestsResponse> {
+    const limit = bankId === "paginated" ? 2 : (options?.limit ?? 100);
+    const offset = options?.offset ?? 0;
+    const items = fixture(bankId).filter(
+      (entry) => !options?.start_date || (entry.started_at ?? "") >= options.start_date,
+    );
+    return {
+      bank_id: bankId,
+      total: items.length,
+      limit,
+      offset,
+      items: items.slice(offset, offset + limit),
+    };
   },
 };
