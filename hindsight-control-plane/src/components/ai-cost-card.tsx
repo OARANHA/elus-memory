@@ -13,7 +13,7 @@ const count = (value: number) => value.toLocaleString("pt-BR");
 type Projection = {
   knownUsd: number; pricedCalls: number; unpricedCalls: number;
   localCalls: number; inputUsd: number; outputUsd: number; cacheUsd: number;
-  rows: { name: string; calls: number; value: number | null }[];
+  rows: { name: string; calls: number; value: number | null; local: boolean }[];
 };
 function priceLedger(data: LedgerUsageResponse): Projection {
   let knownUsd = 0, pricedCalls = 0, unpricedCalls = 0, localCalls = 0;
@@ -38,7 +38,7 @@ function priceLedger(data: LedgerUsageResponse): Projection {
       cacheUsd += estimate.cacheUsd;
     } else unpricedCalls += model.calls;
     rows.push({ name: `${model.provider ?? "?"} / ${model.model ?? "?"}`, calls: model.calls,
-      value: priced ? estimate.knownUsd : null });
+      value: priced ? estimate.knownUsd : null, local });
   }
   // When cardinality is truncated, never represent the model breakdown as complete.
   if (data.models_truncated) unpricedCalls += Math.max(0, data.totals.calls - pricedCalls - unpricedCalls - localCalls);
@@ -71,6 +71,13 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
   const today = data ? priceLedger(data.today) : null;
   const daily = data?.month.daily.slice(-7) ?? [];
   const partial = !!data && (data.month.models_truncated || !data.month.coverage.historical_backfill_confirmed);
+  const costLabel = (projection: Projection, calls: number) =>
+    projection.pricedCalls > 0 ? usd(projection.knownUsd) :
+    calls === 0 ? "Sem consumo registrado" :
+    projection.localCalls === calls ? "Somente processamento local" : "Custo não calculável";
+  const breakdownLabel = (projection: Projection, value: number) =>
+    projection.pricedCalls > 0 ? usd(value) :
+    projection.localCalls > 0 && projection.unpricedCalls === 0 ? "Não aplicável" : "Desconhecido";
   return (
     <section className="mt-4 rounded-2xl border border-border bg-card p-4 sm:p-5" aria-label="Custo estimado de IA">
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -82,8 +89,8 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
        !data || !month || !today ? <p role="status" className="text-sm text-muted-foreground">Carregando ledger persistente…</p> :
        <>
         <div className="grid gap-4 sm:grid-cols-2">
-          <div><p className="text-xs text-muted-foreground">Hoje</p><p className="text-2xl font-semibold tabular-nums">{today.pricedCalls ? usd(today.knownUsd) : "Indisponível"}</p></div>
-          <div><p className="text-xs text-muted-foreground">Mês atual</p><p className="text-2xl font-semibold tabular-nums">{month.pricedCalls ? usd(month.knownUsd) : "Indisponível"}</p></div>
+          <div><p className="text-xs text-muted-foreground">Hoje</p><p className="text-2xl font-semibold tabular-nums">{costLabel(today, data.today.totals.calls)}</p></div>
+          <div><p className="text-xs text-muted-foreground">Mês atual</p><p className="text-2xl font-semibold tabular-nums">{costLabel(month, data.month.totals.calls)}</p></div>
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-3" aria-label="Consumo registrado no mês">
           <div><p className="text-xs text-muted-foreground">Chamadas persistidas</p><p className="text-lg font-semibold tabular-nums">{count(data.month.totals.calls)}</p></div>
@@ -103,14 +110,14 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
             </div>)}
           </div>
         </div>
-        <p className="mt-3 text-xs text-muted-foreground">Banco: {bankId} · Entrada {month.pricedCalls ? usd(month.inputUsd) : "Indisponível"} · Saída {month.pricedCalls ? usd(month.outputUsd) : "Indisponível"} · Cache {month.pricedCalls ? usd(month.cacheUsd) : "Indisponível"}</p>
+        <p className="mt-3 text-xs text-muted-foreground">Banco: {bankId} · Entrada {breakdownLabel(month, month.inputUsd)} · Saída {breakdownLabel(month, month.outputUsd)} · Cache {breakdownLabel(month, month.cacheUsd)}</p>
         <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-          {month.rows.map((r,i)=><li key={i} className="flex min-w-0 flex-wrap justify-between gap-2"><span className="break-all">{r.name} · {count(r.calls)} chamadas</span><span>{r.value===null ? "Sem tarifa verificável" : usd(r.value)}</span></li>)}
+          {month.rows.map((r,i)=><li key={i} className="flex min-w-0 flex-wrap justify-between gap-2"><span className="break-all">{r.name} · {count(r.calls)} chamadas</span><span>{r.local ? "Processamento local · custo de API não aplicável" : r.value===null ? "Sem tarifa ou tokens verificáveis" : usd(r.value)}</span></li>)}
         </ul>
         <p className="mt-2 text-xs text-muted-foreground">Processamento local: {count(month.localCalls)} chamadas. Infraestrutura não incluída.</p>
         {(month.unpricedCalls > 0 || data.month.totals.missing_usage > 0 || partial) &&
           <p role="status" className="mt-3 text-xs text-amber-700 dark:text-amber-400">
-            {count(month.unpricedCalls)} chamadas sem custo precificado; {count(data.month.totals.missing_usage)} registros com tokens ausentes.
+            {count(month.unpricedCalls)} chamadas externas sem custo calculável; {count(data.month.totals.missing_usage)} registros sem tokens informados (incluindo processamento local).
             {partial ? " Cobertura histórica não certificada: o backfill anterior à ativação do ledger não foi confirmado." : ""}
           </p>}
         <p className="mt-2 text-xs text-muted-foreground">Fonte: ledger persistente. Janela UTC {data.month.start.slice(0,10)} a {data.month.end.slice(0,10)}; primeira ocorrência na janela: {data.month.coverage.earliest ?? "não registrada"}. Valores não representam faturamento conciliado.</p>
