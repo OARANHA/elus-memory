@@ -51,3 +51,21 @@ BEGIN
     OR (SELECT count(*) FROM elus_usage_ledger WHERE bank_id='bank-c') != 0
    THEN RAISE EXCEPTION 'Invalid data persisted'; END IF;
 END $$;
+
+
+-- Two tenant schemas share a connection pool; qualified INSERT must not leak
+-- bank usage into the session's default public schema.
+CREATE SCHEMA tenant_b;
+CREATE TABLE tenant_b.llm_requests (LIKE public.llm_requests INCLUDING ALL);
+SET search_path TO tenant_b, public;
+\ir ../migrations/001_usage_ledger_candidate.sql
+SET search_path TO public;
+INSERT INTO tenant_b.llm_requests (id, bank_id, status)
+VALUES ('44444444-4444-4444-8444-444444444444', 'tenant-b-bank', 'success');
+DO $$
+BEGIN
+  IF (SELECT count(*) FROM tenant_b.elus_usage_ledger) != 1
+     THEN RAISE EXCEPTION 'Tenant B usage not retained'; END IF;
+  IF (SELECT count(*) FROM public.elus_usage_ledger) != 1
+     THEN RAISE EXCEPTION 'Cross-schema ledger contamination'; END IF;
+END $$;
