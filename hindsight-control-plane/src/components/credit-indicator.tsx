@@ -22,7 +22,7 @@ export function CreditIndicator() {
         const recent = balance?.recent_raw;
         // DeepInfra checklist: negative stripe_balance is prepaid funds.
         // Monetary interpretation requires a documented/verified USD unit.
-        if (payload.billingUnit !== "usd" || balance?.suspended ||
+        if (payload.balanceUnit !== "usd_estimated" || balance?.suspended ||
             typeof gross !== "number" || gross >= 0 || !Number.isFinite(gross) ||
             typeof recent !== "number" || recent < 0 || !Number.isFinite(recent)) {
           if (active) setCredit(null);
