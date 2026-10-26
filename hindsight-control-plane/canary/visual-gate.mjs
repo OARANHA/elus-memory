@@ -26,6 +26,14 @@ try {
     await page.getByText("Indisponível").first().waitFor();
     assert.ok((await page.locator("body").innerText()).includes("não precificadas"));
     await page.screenshot({ path: `canary-evidence/${name}-unknown.png`, fullPage: true });
+    await page.goto("http://127.0.0.1:4179/?bank=paginated", { waitUntil: "networkidle" });
+    const paginated = await page.locator("body").innerText();
+    assert.match(paginated, /3 chamadas/);
+    assert.doesNotMatch(paginated, /Amostra limitada/);
+    await page.screenshot({ path: `canary-evidence/${name}-paginated.png`, fullPage: true });
+    await page.goto("http://127.0.0.1:4179/?bank=empty", { waitUntil: "networkidle" });
+    await page.getByText("Indisponível").first().waitFor();
+    await page.screenshot({ path: `canary-evidence/${name}-empty.png`, fullPage: true });
     await page.close();
   }
   process.stdout.write("CANARY_VISUAL=GREEN (desktop 1440px, mobile 390px, unknown pricing)\\n");
