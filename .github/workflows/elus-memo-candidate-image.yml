@@ -3,6 +3,7 @@ name: ELUS Memory candidate image
 on:
   push:
     branches:
+      - main
       - feat/elus-memo-ai-cost-card-20261025
     paths:
       - "hindsight-control-plane/**"
