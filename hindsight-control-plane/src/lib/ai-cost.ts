@@ -84,7 +84,10 @@ export function estimateCost(
     if (bankId && entry.bank_id !== bankId) continue;
     const provider = entry.provider?.trim().toLowerCase() ?? "";
     const model = entry.model?.trim() ?? "";
-    const rate = rates.find((r) => r.provider.toLowerCase() === provider && r.model === model);
+    // Providers sometimes prefix model IDs with a namespace (org/model).
+    // Match only the final segment, never fuzzy substrings, to avoid mixing variants.
+    const modelName = model.split("/").at(-1)?.toLowerCase() ?? "";
+    const rate = rates.find((r) => r.provider.toLowerCase() === provider && r.model.toLowerCase() === modelName);
     const input = entry.input_tokens;
     const output = entry.output_tokens;
     const cached = entry.cached_tokens ?? 0;
