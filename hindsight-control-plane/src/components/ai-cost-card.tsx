@@ -25,17 +25,19 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
       const month = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1));
       const entries: LLMRequestEntry[] = [];
       let total = 0;
+      let fetched = 0;
       for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
         const response = await client.listLLMRequests(bankId, { start_date: month.toISOString(), limit: PAGE_SIZE, offset });
         entries.push(...response.items.filter((e) => e.bank_id === bankId));
         total = response.total;
+        fetched += response.items.length;
         if (offset + response.items.length >= response.total || response.items.length === 0) break;
       }
       if (!cancelled) {
         setState({
           today: estimateCost(entries.filter((e) => e.started_at && new Date(e.started_at) >= today), undefined, bankId),
           month: estimateCost(entries, undefined, bankId),
-          partial: total > entries.length,
+          partial: total > fetched,
         });
       }
     };
@@ -67,7 +69,7 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
             </li>)}
           </ul>}
           {(state.month.unknownCalls > 0 || state.partial) && <p className="mt-3 text-xs text-amber-700 dark:text-amber-400" role="status">
-            {state.month.unknownCalls > 0 ? `${state.month.unknownCalls} chamadas sem preço/uso verificável; total conhecido não representa o gasto completo. ` : ""}
+            {state.month.unknownCalls > 0 ? `${state.month.unknownCalls} chamadas sem preço/uso verificável no mês; total conhecido não representa o gasto completo. ` : ""}
             {state.partial ? "Amostra limitada; total mensal incompleto." : ""}
           </p>}
           <p className="mt-2 text-xs text-muted-foreground">Somente traces disponíveis. Totais históricos após expiração exigem agregação persistida.</p>
