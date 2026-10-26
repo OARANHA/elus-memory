@@ -13,6 +13,18 @@ const entry = (values: Partial<LLMRequestEntry> = {}): LLMRequestEntry => ({
   input: null, output: null, error: null, llm_info: {}, metadata: {}, ...values,
 });
 describe("estimateCost", () => {
+  it("uses the same DeepInfra model tariff for newly created banks", () => {
+    const model = "deepseek-ai/DeepSeek-V4.1-Flash-1017";
+    const entries = [
+      entry({ bank_id: "new-bank", model, provider: "openai" }),
+      entry({ bank_id: "other-bank", model, provider: "openai" }),
+    ];
+    const tariffs = [{ ...rate, model }];
+    expect(estimateCost(entries, tariffs, "new-bank").pricedCalls).toBe(1);
+    expect(estimateCost(entries, tariffs, "other-bank").pricedCalls).toBe(1);
+    expect(estimateCost(entries, tariffs, "third-bank").pricedCalls).toBe(0);
+  });
+
   it("splits uncached input, output and cache without double counting", () => {
     const r = estimateCost([entry()], [rate]);
     expect(r.inputUsd).toBeCloseTo(0.8);
