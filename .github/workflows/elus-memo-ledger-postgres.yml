@@ -36,7 +36,7 @@ jobs:
       - name: Verify canonical Alembic revision graph
         run: python3 deploy/elus/tests/check_alembic_heads.py
       - name: Install PostgreSQL client
-        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client-16
       - name: Install isolated migration test driver
         run: python3 -m pip install --break-system-packages psycopg2-binary
       - name: Execute Alembic upgrade and downgrade on isolated PostgreSQL
