@@ -35,6 +35,39 @@ const fixture = (bankId: string): LLMRequestEntry[] => {
 // Match the existing paginated endpoint shape, without network access or secrets.
 // The miniature pages exercise the real card's paging loop rather than handing it all rows.
 export const client = {
+  async readUsageLedger(bankId: string, start: string, end: string) {
+    const items = fixture(bankId).filter(row =>
+      !!row.started_at && row.started_at >= start && row.started_at < end
+    );
+    const grouped = new Map<string, typeof items>();
+    const byDay = new Map<string, number>();
+    for (const item of items) {
+      const key = JSON.stringify([item.provider, item.model]);
+      grouped.set(key, [...(grouped.get(key) || []), item]);
+      const day = item.started_at!.slice(0, 10);
+      byDay.set(day, (byDay.get(day) || 0) + 1);
+    }
+    const sum = (rows: typeof items, field: "input_tokens" | "output_tokens" | "cached_tokens") =>
+      rows.reduce((a, r) => a + (r[field] ?? 0), 0);
+    return {
+      bank_id: bankId, source: "persistent_ledger" as const,
+      start, end,
+      totals: { calls: items.length, input_tokens: sum(items, "input_tokens"),
+        output_tokens: sum(items, "output_tokens"), cached_tokens: sum(items, "cached_tokens"),
+        missing_usage: 0 },
+      coverage: { earliest: items[0]?.started_at ?? null,
+        latest: items.at(-1)?.started_at ?? null, historical_backfill_confirmed: false },
+      models_truncated: false,
+      daily: [...byDay].sort(([a], [b]) => a.localeCompare(b)).map(([day, calls]) => ({ day, calls })),
+      models: [...grouped].map(([key, rows]) => {
+        const [provider, model] = JSON.parse(key) as [string, string];
+        return { provider, model, calls: rows.length,
+          input_tokens: sum(rows, "input_tokens"), output_tokens: sum(rows, "output_tokens"),
+          cached_tokens: sum(rows, "cached_tokens"), missing_usage: 0 };
+      }),
+      estimated_cost_usd: null as null,
+    };
+  },
   async listLLMRequests(
     bankId: string,
     options?: { start_date?: string; limit?: number; offset?: number },
