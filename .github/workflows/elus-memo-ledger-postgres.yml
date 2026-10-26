@@ -4,6 +4,7 @@ on:
     paths:
       - "deploy/elus/migrations/**"
       - "deploy/elus/tests/**"
+      - "deploy/elus/tools/**"
       - "hindsight-api-slim/hindsight_api/alembic/versions/**"
       - "hindsight-api-slim/hindsight_api/engine/elus_usage_ledger.py"
       - "hindsight-api-slim/hindsight_api/api/http.py"
@@ -36,6 +37,8 @@ jobs:
           --health-retries 12
     steps:
       - uses: actions/checkout@v4
+      - name: Compile production backfill executor
+        run: python3 -m py_compile deploy/elus/tools/production_usage_backfill.py
       - name: Verify canonical Alembic revision graph
         run: python3 deploy/elus/tests/check_alembic_heads.py
       - name: Install PostgreSQL client
