@@ -17,7 +17,7 @@ const displayCost = (summary: CostSummary) =>
   summary.pricedCalls === 0 ? "Indisponível" : money(summary.knownUsd);
 
 export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boolean }) {
-  const [state, setState] = useState<{ today: CostSummary; month: CostSummary; partial: boolean } | null>(null);
+  const [state, setState] = useState<{ today: CostSummary; month: CostSummary; partial: boolean; requests: number; inputTokens: number; outputTokens: number; cachedTokens: number; daily: { day: string; requests: number }[] } | null>(null);
   const [error, setError] = useState(false);
   useEffect(() => {
     if (!enabled) return;
@@ -69,6 +69,16 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
           today: estimateCost(entries.filter((e) => e.started_at && new Date(e.started_at) >= today), undefined, bankId),
           month: estimateCost(entries, undefined, bankId),
           partial: total > fetched,
+          requests: entries.length,
+          inputTokens: entries.reduce((sum, entry) => sum + (entry.input_tokens ?? 0), 0),
+          outputTokens: entries.reduce((sum, entry) => sum + (entry.output_tokens ?? 0), 0),
+          cachedTokens: entries.reduce((sum, entry) => sum + (entry.cached_tokens ?? 0), 0),
+          daily: Array.from({ length: 7 }, (_, index) => {
+            const day = new Date(today);
+            day.setUTCDate(day.getUTCDate() - (6 - index));
+            const isoDay = day.toISOString().slice(0, 10);
+            return { day: isoDay, requests: entries.filter((entry) => entry.started_at?.slice(0, 10) === isoDay).length };
+          }),
         });
       }
     };
@@ -89,6 +99,24 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
           <div className="grid gap-4 sm:grid-cols-2">
             <div><p className="text-xs text-muted-foreground">Hoje</p><p className="text-2xl font-semibold tabular-nums">{displayCost(state.today)}</p></div>
             <div><p className="text-xs text-muted-foreground">Mês atual</p><p className="text-2xl font-semibold tabular-nums">{displayCost(state.month)}</p></div>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3" aria-label="Volume de consumo observado no mês">
+            <div><p className="text-xs text-muted-foreground">Chamadas observadas</p><p className="text-lg font-semibold tabular-nums">{state.requests.toLocaleString("pt-BR")}</p></div>
+            <div><p className="text-xs text-muted-foreground">Tokens de entrada</p><p className="text-lg font-semibold tabular-nums">{state.inputTokens.toLocaleString("pt-BR")}</p></div>
+            <div><p className="text-xs text-muted-foreground">Tokens de saída</p><p className="text-lg font-semibold tabular-nums">{state.outputTokens.toLocaleString("pt-BR")}</p></div>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">Tokens de entrada em cache registrados: {state.cachedTokens.toLocaleString("pt-BR")} (já incluídos na entrada).</p>
+          <div className="mt-4" aria-label="Chamadas observadas nos últimos sete dias">
+            <p className="text-xs font-medium text-foreground">Chamadas · últimos 7 dias (UTC)</p>
+            <div className="mt-2 grid grid-cols-7 gap-1 sm:gap-2">{state.daily.map((day) => (
+              <div key={day.day} className="min-w-0 text-center" title={`${day.day}: ${day.requests} chamadas`}>
+                <div className="flex h-12 items-end justify-center rounded-md bg-muted/40 p-1">
+                  <div className="w-full rounded-sm bg-primary/70" style={{ height: `${Math.max(day.requests > 0 ? 8 : 0, (day.requests / Math.max(1, ...state.daily.map((item) => item.requests))) * 100)}%` }} />
+                </div>
+                <p className="mt-1 text-[10px] tabular-nums text-muted-foreground">{day.day.slice(5)}</p>
+                <p className="text-[10px] tabular-nums text-muted-foreground">{day.requests}</p>
+              </div>
+            ))}</div>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
             Banco: {bankId} · Entrada {state.month.pricedCalls ? money(state.month.inputUsd) : "Indisponível"} · Saída {state.month.pricedCalls ? money(state.month.outputUsd) : "Indisponível"} · Cache {state.month.pricedCalls ? money(state.month.cacheUsd) : "Indisponível"}
@@ -120,7 +148,7 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
               </ul>
             </div>
           )}
-          <p className="mt-2 text-xs text-muted-foreground">Somente traces disponíveis. Totais históricos após expiração exigem agregação persistida.</p>
+          <p className="mt-2 text-xs text-muted-foreground">Visão baseada em traces disponíveis (até 1.000 eventos no mês). O ledger persistente já está no banco, mas ainda não alimenta este card. Não use estes totais como faturamento.</p>
         </>
       }
     </section>
