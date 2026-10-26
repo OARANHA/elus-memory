@@ -54,3 +54,9 @@ docker ps -a --filter 'label=com.docker.compose.project=elus-memory' --format '{
 docker inspect CONTÊINER --format '{{json .Mounts}}' | jq '[.[] | {Type,Name,Destination,RW}]'
 ```
 - Não copiar `.pg0` enquanto PostgreSQL estiver em execução. Apenas depois de comprovar mounts, versão do banco, política de backup, controle de acesso, armazenamento seguro e isolamento de clone poderá ser autorizada uma operação de backup.
+
+## Evidência direta do Docker Engine e volume (26/10/2026)
+- Operador confirmou no `wandora-vps-01`, DockerRoot `/var/lib/docker`: `elus-memory-hindsight-1` (ID parcial `568f0e14bc26`) executando imagem candidata `ffe55c8c`; stack `elus-memory` tem também `elus-memory-mcp_gateway-1`.
+- `docker inspect elus-memory-hindsight-1 --format ...` retornou **Type=volume Name=elus-memory_hindsight_data Destination=/home/hindsight/.pg0 RW=true**. Evidência obtida do host, não inferência do Compose.
+- A inspeção via MCP `docker_inspect_safe(target=wandora-agent, container=elus-memory-hindsight-1)` retorna `CONTAINER_NOT_ALLOWED`; não é ausência de contêiner. Não expandir permissões sem autorização apropriada.
+- Próximo pré-voo: verificar `PG_VERSION` e binários de backup no contêiner sem revelar segredos; inspecionar espaço livre e decidir método consistente. Sem `docker cp` da base ativa.
