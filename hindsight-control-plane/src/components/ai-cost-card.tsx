@@ -9,6 +9,7 @@ const PAGE_SIZE = 100;
 const MAX_ROWS = 1000;
 const MAX_PAGES = 10;
 const REQUEST_TIMEOUT_MS = 12_000;
+const TOTAL_TIMEOUT_MS = 20_000;
 const money = (n: number) => new Intl.NumberFormat("pt-BR", {
   style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 6,
 }).format(n);
@@ -36,12 +37,14 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
       const seen = new Set<string>();
       let offset = 0;
       let pageCount = 0;
+      const deadline = Date.now() + TOTAL_TIMEOUT_MS;
       while (offset < MAX_ROWS && pageCount < MAX_PAGES) {
         pageCount++;
         const request = client.listLLMRequests(bankId, { start_date: month.toISOString(), limit: PAGE_SIZE, offset });
         let timer: ReturnType<typeof setTimeout> | undefined;
         const timeout = new Promise<never>((_, reject) => {
-          timer = setTimeout(() => reject(new Error("LLM_REQUESTS_TIMEOUT")), REQUEST_TIMEOUT_MS);
+          const remaining = deadline - Date.now();
+          timer = setTimeout(() => reject(new Error("LLM_REQUESTS_TIMEOUT")), Math.max(0, Math.min(REQUEST_TIMEOUT_MS, remaining)));
         });
         let response: Awaited<typeof request>;
         try {
