@@ -55,6 +55,8 @@ jobs:
         env:
           HINDSIGHT_API_DATABASE_URL: postgresql://postgres:test-only@127.0.0.1:5432/usage_ledger_test
         run: python3 deploy/elus/tests/test_alembic_full_chain.py
+      - name: pg_dump and pg_restore disaster recovery gate
+        run: bash deploy/elus/tests/test_backup_restore.sh
       - name: Real PostgreSQL transactional ledger smoke
         env:
           PGPASSWORD: test-only
