@@ -16,6 +16,10 @@ export interface ModelRate {
 // Confirm billing currency/unit independently before treating estimates as invoices.
 // A missing cachedInput rate is intentionally undefined, not zero.
 export const MODEL_RATES: readonly ModelRate[] = [
+  // Confirmed DeepInfra billing route in ELUS. Official model API listed promotional Standard
+  // rates at inspection; discounts and billing tiers can change independently of code.
+  // https://deepinfra.com/deepseek-ai/DeepSeek-V4.1-Flash-1017/api
+  { provider: "deepinfra", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", input: 0.098, output: 0.294, cachedInput: 0.003, source: "DeepInfra official model API page; promotional Standard, subject to change", checkedAt: "2026-10-25" },
   { provider: "deepinfra", model: "DeepSeek-V4.1-Flash-1017", input: 0.098, output: 0.294, cachedInput: 0.003, source: "Tabela DeepInfra informada pelo proprietário", checkedAt: "2026-10-25" },
   { provider: "deepinfra", model: "NVIDIA-Nemotron-3.5-Super-VL", input: 0.15, output: 0.5, cachedInput: 0.02, source: "Tabela DeepInfra informada pelo proprietário", checkedAt: "2026-10-25" },
   { provider: "deepinfra", model: "Step-5-Preview", input: 1, output: 2.7, cachedInput: 0.1, source: "Tabela DeepInfra informada pelo proprietário", checkedAt: "2026-10-25" },
@@ -70,6 +74,7 @@ export interface CostSummary {
   cacheUsd: number;
   pricedCalls: number;
   unknownCalls: number;
+  localCalls: number;
   unknownReasons: { provider: string; model: string; reason: string; calls: number }[];
   rows: { provider: string; model: string; usd: number; calls: number }[];
 }
@@ -81,11 +86,27 @@ export function estimateCost(
 ): CostSummary {
   const byModel = new Map<string, CostSummary["rows"][number]>();
   const byUnknown = new Map<string, CostSummary["unknownReasons"][number]>();
-  let inputUsd = 0, outputUsd = 0, cacheUsd = 0, pricedCalls = 0, unknownCalls = 0;
+  let inputUsd = 0, outputUsd = 0, cacheUsd = 0, pricedCalls = 0, unknownCalls = 0, localCalls = 0;
   for (const entry of entries) {
     if (bankId && entry.bank_id !== bankId) continue;
-    const provider = entry.provider?.trim().toLowerCase() ?? "";
+    const recordedProvider = entry.provider?.trim().toLowerCase() ?? "";
+    const exactModel = entry.model?.trim().toLowerCase() ?? "";
+    // The ELUS owner confirmed that this specific OpenAI-compatible gateway
+    // route is billed by DeepInfra. Never remap unrelated OpenAI model routes.
+    const provider = (bankId === "Elus360" || bankId === "memo.elus360") &&
+      recordedProvider === "openai" &&
+      exactModel === "deepseek-ai/deepseek-v4.1-flash-1017"
+      ? "deepinfra" : recordedProvider;
     const model = entry.model?.trim() ?? "";
+    // Only these verified local models are outside metered cloud LLM tokens.
+    // Their infrastructure/electricity costs are NOT estimated here.
+    if (provider === "local" && (
+      model.toLowerCase() === "baai/bge-small-en-v1.5" ||
+      model.toLowerCase() === "cross-encoder/ms-marco-minilm-l-6-v2"
+    )) {
+      localCalls++;
+      continue;
+    }
     // Providers sometimes prefix model IDs with a namespace (org/model).
     // Match only the final segment, never fuzzy substrings, to avoid mixing variants.
     const modelId = model.toLowerCase();
@@ -109,7 +130,10 @@ export function estimateCost(
     if (!rate || input == null || output == null || input < 0 || output < 0 ||
         cached < 0 || cached > input || (cached > 0 && rate.cachedInput == null)) {
       unknownCalls++;
-      const reason = !rate ? "Sem tarifa cadastrada" :
+      const reason = !rate
+        ? provider === "openai" && model.toLowerCase() === "deepseek-ai/deepseek-v4.1-flash-1017"
+          ? "Gateway OpenAI compatível: origem de cobrança não verificada"
+          : "Sem tarifa cadastrada" :
         input == null || output == null ? "Tokens ausentes" :
         !Number.isFinite(input) || !Number.isFinite(output) || !Number.isFinite(cached) ||
         input < 0 || output < 0 || cached < 0 || cached > input ? "Tokens inválidos" :
@@ -136,7 +160,7 @@ export function estimateCost(
   }
   return {
     knownUsd: inputUsd + outputUsd + cacheUsd,
-    inputUsd, outputUsd, cacheUsd, pricedCalls, unknownCalls,
+    inputUsd, outputUsd, cacheUsd, pricedCalls, unknownCalls, localCalls,
     unknownReasons: [...byUnknown.values()].sort((a, b) => b.calls - a.calls),
     rows: [...byModel.values()].sort((a, b) => b.usd - a.usd),
   };

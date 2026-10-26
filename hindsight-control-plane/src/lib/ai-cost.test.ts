@@ -58,6 +58,30 @@ describe("estimateCost", () => {
     expect(result.unknownReasons.map((r) => r.reason)).toContain("Sem tarifa cadastrada");
     expect(result.unknownReasons.map((r) => r.reason)).toContain("Tokens ausentes");
   });
+  it("separates verified local embedding and reranking calls from unknown cloud billing", () => {
+    const result = estimateCost([
+      entry({ id: "embed", provider: "local", model: "BAAI/bge-small-en-v1.5" }),
+      entry({ id: "rerank", provider: "local", model: "cross-encoder/ms-marco-MiniLM-L-6-v2" }),
+      entry({ id: "llm", provider: "openai", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017" }),
+    ], [rate]);
+    expect(result.localCalls).toBe(2);
+    expect(result.unknownCalls).toBe(1);
+    expect(result.pricedCalls).toBe(0);
+    expect(result.unknownReasons[0].reason).toContain("origem de cobrança não verificada");
+  });
+  it("prices only the verified ELUS DeepInfra gateway route at its published promotional rate", () => {
+    const call = entry({
+      id: "elus", bank_id: "Elus360", provider: "openai",
+      model: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+      input_tokens: 1_000_000, output_tokens: 1_000_000, cached_tokens: 0,
+    });
+    const result = estimateCost([call], undefined, "Elus360");
+    expect(result.pricedCalls).toBe(1);
+    expect(result.inputUsd).toBeCloseTo(0.098);
+    expect(result.outputUsd).toBeCloseTo(0.294);
+    expect(estimateCost([{ ...call, model: "other-model" }], undefined, "Elus360").pricedCalls).toBe(0);
+    expect(estimateCost([{ ...call, bank_id: "other-bank" }], undefined, "other-bank").pricedCalls).toBe(0);
+  });
   it("rejects invalid token accounting", () => {
     expect(estimateCost([entry({ cached_tokens: 1_000_001 })], [rate]).unknownCalls).toBe(1);
   });

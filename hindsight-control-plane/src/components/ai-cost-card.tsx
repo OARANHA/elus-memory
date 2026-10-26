@@ -99,6 +99,10 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
               <span className="tabular-nums">{money(r.usd)}</span>
             </li>)}
           </ul>}
+          <p className="mt-2 text-xs text-muted-foreground">
+            Processamento local: {state.month.localCalls} chamadas no mês ({state.today.localCalls} hoje).
+            Sem tarifa de API externa; custos de infraestrutura não incluídos.
+          </p>
           {(state.month.unknownCalls > 0 || state.today.unknownCalls > 0 || state.partial) && <p className="mt-3 text-xs text-amber-700 dark:text-amber-400" role="status">
             {state.month.unknownCalls > 0 ? `${state.month.unknownCalls} chamadas sem preço/uso verificável no mês; total conhecido não representa o gasto completo. ` : ""}
             {state.today.unknownCalls > 0 ? ` Hoje: ${state.today.unknownCalls} chamadas não precificadas.` : ""}
