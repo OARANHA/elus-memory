@@ -67,3 +67,9 @@ docker inspect CONTÊINER --format '{{json .Mounts}}' | jq '[.[] | {Type,Name,De
 - Processo PID 75: `/home/hindsight/.pg0/installation/18.1.0/bin/postgres -D /home/hindsight/.pg0/instances/hindsight/data -F -p 5432 ...` (PostgreSQL versão binária 18.1.0, porta interna 5432).
 - Os comandos `command -v pg_dump` no PATH não encontraram binários, mas podem existir em `.pg0/installation/18.1.0/bin/`. NÃO invocar backup até verificar binários, destino fora do volume e espaço disponível.
 - Dispositivo host `/dev/sda1` 193G total, 161G usado, 33G livre (84%). Não presumir capacidade suficiente para dump e restore; medir `du -sh` e estimativa de backup. **Gate PG18 ainda pendente**: CI existente roda PG16/pgvector.
+
+## Evidência 26/10/2026: PostgreSQL 18.1 e ferramentas
+- Operador leu `PG_VERSION=18` em `/home/hindsight/.pg0/instances/hindsight/data/PG_VERSION`.
+- Binários executáveis presentes em `/home/hindsight/.pg0/installation/18.1.0/bin/`: `pg_dump`, `pg_restore`, `pg_basebackup`.
+- `du -sh /home/hindsight/.pg0/instances/hindsight/data` = `194M`; host tinha 33G disponíveis, 84% ocupado. São métricas distintas; tamanho do dump não está determinado.
+- Próximo passo: confirmar conexão sem expor senhas, testar permissões e inventariar DB/schemas via leitura; escolher destino protegido fora do volume `.pg0`, criar dump com ferramentas 18.1, restringir modo 0600 e ensaiar restore isolado. Nada executado ainda.
