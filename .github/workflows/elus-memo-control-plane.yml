@@ -63,7 +63,7 @@ jobs:
         working-directory: hindsight-control-plane
         run: |
           npx vite --config canary/vite.config.ts > /tmp/elus-canary-vite.log 2>&1 &
-          for i in {1..45}; do
+          for i in $(seq 1 45); do
             if curl -fsS http://127.0.0.1:4179/ > /dev/null; then exit 0; fi
             sleep 2
           done
