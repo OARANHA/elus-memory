@@ -49,6 +49,8 @@ async def test_bounded_queries_and_null_cost(monkeypatch):
     class Connection:
         async def fetchrow(self, sql, *args):
             calls.append((sql, args))
+            if "retained_traces" in sql:
+                return dict(retained_traces=2, unreconciled_traces=0, earliest_retained_trace=utc(2026, 10, 26))
             return dict(calls=2, input_tokens=100, output_tokens=40, cached_tokens=20,
                         missing_usage=1, earliest=utc(2026, 10, 26), latest=utc(2026, 10, 26))
         async def fetch(self, sql, *args):
@@ -64,7 +66,8 @@ async def test_bounded_queries_and_null_cost(monkeypatch):
     assert result["totals"]["calls"] == 2
     assert result["estimated_cost_usd"] is None
     assert result["coverage"]["historical_backfill_confirmed"] is False
-    assert len(calls) == 3
+    assert len(calls) == 4
     assert all('"tenant_a".elus_usage_ledger' in sql for sql, _ in calls)
+    assert result["coverage"]["retained_traces_reconciled"] is True
     assert all(params[0] == "bank-a" for _, params in calls)
-    assert calls[-1][1][-1] == 101
+    assert calls[2][1][-1] == 101
