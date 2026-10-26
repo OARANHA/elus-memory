@@ -60,3 +60,10 @@ docker inspect CONTÊINER --format '{{json .Mounts}}' | jq '[.[] | {Type,Name,De
 - `docker inspect elus-memory-hindsight-1 --format ...` retornou **Type=volume Name=elus-memory_hindsight_data Destination=/home/hindsight/.pg0 RW=true**. Evidência obtida do host, não inferência do Compose.
 - A inspeção via MCP `docker_inspect_safe(target=wandora-agent, container=elus-memory-hindsight-1)` retorna `CONTAINER_NOT_ALLOWED`; não é ausência de contêiner. Não expandir permissões sem autorização apropriada.
 - Próximo pré-voo: verificar `PG_VERSION` e binários de backup no contêiner sem revelar segredos; inspecionar espaço livre e decidir método consistente. Sem `docker cp` da base ativa.
+
+## Instalação PostgreSQL efetiva (evidência terminal 26/10/2026)
+- Contêiner `elus-memory-hindsight-1` mostra `.pg0/installation` e `.pg0/instances`.
+- `PG_VERSION` efetivo: `/home/hindsight/.pg0/instances/hindsight/data/PG_VERSION`.
+- Processo PID 75: `/home/hindsight/.pg0/installation/18.1.0/bin/postgres -D /home/hindsight/.pg0/instances/hindsight/data -F -p 5432 ...` (PostgreSQL versão binária 18.1.0, porta interna 5432).
+- Os comandos `command -v pg_dump` no PATH não encontraram binários, mas podem existir em `.pg0/installation/18.1.0/bin/`. NÃO invocar backup até verificar binários, destino fora do volume e espaço disponível.
+- Dispositivo host `/dev/sda1` 193G total, 161G usado, 33G livre (84%). Não presumir capacidade suficiente para dump e restore; medir `du -sh` e estimativa de backup. **Gate PG18 ainda pendente**: CI existente roda PG16/pgvector.
