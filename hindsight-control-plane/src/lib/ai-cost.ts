@@ -70,6 +70,7 @@ export interface CostSummary {
   cacheUsd: number;
   pricedCalls: number;
   unknownCalls: number;
+  unknownReasons: { provider: string; model: string; reason: string; calls: number }[];
   rows: { provider: string; model: string; usd: number; calls: number }[];
 }
 
@@ -79,6 +80,7 @@ export function estimateCost(
   bankId?: string,
 ): CostSummary {
   const byModel = new Map<string, CostSummary["rows"][number]>();
+  const byUnknown = new Map<string, CostSummary["unknownReasons"][number]>();
   let inputUsd = 0, outputUsd = 0, cacheUsd = 0, pricedCalls = 0, unknownCalls = 0;
   for (const entry of entries) {
     if (bankId && entry.bank_id !== bankId) continue;
@@ -107,6 +109,17 @@ export function estimateCost(
     if (!rate || input == null || output == null || input < 0 || output < 0 ||
         cached < 0 || cached > input || (cached > 0 && rate.cachedInput == null)) {
       unknownCalls++;
+      const reason = !rate ? "Sem tarifa cadastrada" :
+        input == null || output == null ? "Tokens ausentes" :
+        !Number.isFinite(input) || !Number.isFinite(output) || !Number.isFinite(cached) ||
+        input < 0 || output < 0 || cached < 0 || cached > input ? "Tokens inválidos" :
+        "Tarifa de cache ausente";
+      const key = JSON.stringify([provider || "(não informado)", model || "(não informado)", reason]);
+      const previous = byUnknown.get(key);
+      byUnknown.set(key, {
+        provider: provider || "(não informado)", model: model || "(não informado)",
+        reason, calls: (previous?.calls ?? 0) + 1,
+      });
       continue;
     }
     const inCost = ((input - cached) * rate.input) / 1_000_000;
@@ -124,6 +137,7 @@ export function estimateCost(
   return {
     knownUsd: inputUsd + outputUsd + cacheUsd,
     inputUsd, outputUsd, cacheUsd, pricedCalls, unknownCalls,
+    unknownReasons: [...byUnknown.values()].sort((a, b) => b.calls - a.calls),
     rows: [...byModel.values()].sort((a, b) => b.usd - a.usd),
   };
 }

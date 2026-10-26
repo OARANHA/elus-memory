@@ -91,7 +91,7 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
             <div><p className="text-xs text-muted-foreground">Mês atual</p><p className="text-2xl font-semibold tabular-nums">{displayCost(state.month)}</p></div>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
-            Banco: {bankId} · Entrada {money(state.month.inputUsd)} · Saída {money(state.month.outputUsd)} · Cache {money(state.month.cacheUsd)}
+            Banco: {bankId} · Entrada {state.month.pricedCalls ? money(state.month.inputUsd) : "Indisponível"} · Saída {state.month.pricedCalls ? money(state.month.outputUsd) : "Indisponível"} · Cache {state.month.pricedCalls ? money(state.month.cacheUsd) : "Indisponível"}
           </p>
           {state.month.rows.length > 0 && <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
             {state.month.rows.map((r) => <li key={r.provider + "/" + r.model} className="flex min-w-0 flex-wrap justify-between gap-2">
@@ -101,8 +101,21 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
           </ul>}
           {(state.month.unknownCalls > 0 || state.today.unknownCalls > 0 || state.partial) && <p className="mt-3 text-xs text-amber-700 dark:text-amber-400" role="status">
             {state.month.unknownCalls > 0 ? `${state.month.unknownCalls} chamadas sem preço/uso verificável no mês; total conhecido não representa o gasto completo. ` : ""}
-            {state.today.unknownCalls > 0 ? ` Hoje: ${state.today.unknownCalls} chamadas não precificadas.` : ""}\n            {state.partial ? "Amostra limitada; totais de hoje e do mês podem estar incompletos." : ""}
+            {state.today.unknownCalls > 0 ? ` Hoje: ${state.today.unknownCalls} chamadas não precificadas.` : ""}
+            {state.partial ? "Amostra limitada; totais de hoje e do mês podem estar incompletos." : ""}
           </p>}
+          {state.month.unknownReasons.length > 0 && (
+            <div className="mt-3 text-xs text-muted-foreground">
+              <p className="font-medium">Diagnóstico das chamadas não precificadas (até 5 grupos):</p>
+              <ul className="mt-1 space-y-1">
+                {state.month.unknownReasons.slice(0, 5).map((item) => (
+                  <li key={JSON.stringify([item.provider, item.model, item.reason])} className="break-all">
+                    {item.calls} × {item.provider} / {item.model} — {item.reason}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
           <p className="mt-2 text-xs text-muted-foreground">Somente traces disponíveis. Totais históricos após expiração exigem agregação persistida.</p>
         </>
       }
