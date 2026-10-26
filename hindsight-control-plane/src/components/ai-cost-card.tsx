@@ -123,8 +123,11 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
           {count(data.month.totals.missing_usage)} chamadas sem contagem de tokens, incluindo processamento local; isso não implica falha de cobrança.
         </p>}
         {coverageUnverified && <p role="status" className="mt-2 text-xs text-muted-foreground">
-          Histórico anterior à captura persistente ainda não reconciliado. Primeira ocorrência armazenada nesta janela: {data.month.coverage.earliest ?? "não registrada"}.
-          Não confundir ausência de registros com custo zero.
+          {data.month.coverage.unreconciled_traces > 0
+            ? `${count(data.month.coverage.unreconciled_traces)} traces retidos ainda não incluídos no ledger deste período.`
+            : "Todos os traces ainda retidos nesta janela estão reconciliados com o ledger."}
+          {" "}Primeiro trace retido: {data.month.coverage.earliest_retained_trace ?? "não registrado"}.
+          {" "}Registros já descartados pela retenção não podem ser certificados; ausência de registros não significa custo zero.
         </p>}
         {data.month.models_truncated && <p role="status" className="mt-2 text-xs text-amber-700 dark:text-amber-400">
           A lista de modelos está limitada; os custos apresentados podem ser parciais.
