@@ -43,6 +43,8 @@ jobs:
 
   visual-canary:
     runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
@@ -57,8 +59,6 @@ jobs:
           mkdir -p "$RUNNER_TEMP/elus-playwright"
           npm install --prefix "$RUNNER_TEMP/elus-playwright" --no-save --ignore-scripts playwright@1.58.2
           ln -s "$RUNNER_TEMP/elus-playwright/node_modules" hindsight-control-plane/canary/node_modules
-      - name: Install Chromium
-        run: '"$RUNNER_TEMP/elus-playwright/node_modules/.bin/playwright" install --with-deps chromium'
       - name: Start isolated component preview
         working-directory: hindsight-control-plane
         run: |
