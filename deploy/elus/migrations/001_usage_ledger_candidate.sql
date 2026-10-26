@@ -27,14 +27,18 @@ CREATE INDEX IF NOT EXISTS idx_elus_usage_bank_day ON elus_usage_ledger (bank_id
 CREATE INDEX IF NOT EXISTS idx_elus_usage_model_day ON elus_usage_ledger (model, occurred_at DESC);
 CREATE OR REPLACE FUNCTION elus_record_usage_ledger() RETURNS trigger AS $$
 BEGIN
-  INSERT INTO elus_usage_ledger(
-    source_request_id, bank_id, operation, scope, provider, model,
-    status, occurred_at, input_tokens, output_tokens, cached_tokens, thoughts_tokens
-  ) VALUES (
-    NEW.id, NEW.bank_id, NEW.operation, NEW.scope, NEW.provider, NEW.model,
-    NEW.status, NEW.started_at, NEW.input_tokens, NEW.output_tokens,
-    NEW.cached_tokens, NEW.thoughts_tokens
-  ) ON CONFLICT (source_request_id) DO NOTHING;
+  -- Resolve the ledger from the *source table's actual schema*; a pooled
+  -- connection's search_path must never redirect one tenant's consumption
+  -- into another tenant's ledger.
+  EXECUTE format(
+    'INSERT INTO %I.elus_usage_ledger (
+       source_request_id, bank_id, operation, scope, provider, model,
+       status, occurred_at, input_tokens, output_tokens, cached_tokens, thoughts_tokens
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)
+     ON CONFLICT (source_request_id) DO NOTHING', TG_TABLE_SCHEMA
+  ) USING NEW.id, NEW.bank_id, NEW.operation, NEW.scope,
+      NEW.provider, NEW.model, NEW.status, NEW.started_at,
+      NEW.input_tokens, NEW.output_tokens, NEW.cached_tokens, NEW.thoughts_tokens;
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
