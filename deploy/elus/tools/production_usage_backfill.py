@@ -66,7 +66,7 @@ def main():
                                AS missing"""
         result = run([str(PG / "psql"), "-X", "-A", "-t", "-v", "ON_ERROR_STOP=1",
                       *query, "-c", count_sql], env=env, capture=True)
-        counters = result.stdout.strip()
+        counters = result.stdout.decode("utf-8").strip()
         traces, ledger, missing = (int(n) for n in counters.split("|"))
         if missing:
             raise RuntimeError("Backfill committed but reconciliation found missing rows")
