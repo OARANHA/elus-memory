@@ -63,6 +63,16 @@ export const MODEL_RATES: readonly ModelRate[] = [
   { provider: "deepinfra", model: "Qwen3.8-Max", input: 1.65, output: 4.951, cachedInput: 0.206, source: "Tabela DeepInfra informada pelo proprietário", checkedAt: "2026-10-25" }
 ];
 
+// DeepInfra publicly lists these STANDARD (undiscounted) rates for the exact 1017 model.
+// Promotional and Flex/Priority prices differ; this is not an invoice.
+// https://deepinfra.com/deepseek-ai/DeepSeek-V4.1-Flash-1017/api
+MODEL_RATES.push({
+  provider: "deepinfra", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  input: 0.20, output: 0.60, cachedInput: 0.006,
+  source: "DeepInfra official model page — undiscounted Standard list price",
+  checkedAt: "2026-10-25",
+});
+
 export interface CostSummary {
   knownUsd: number;
   inputUsd: number;
@@ -85,7 +95,14 @@ export function estimateCost(
   let inputUsd = 0, outputUsd = 0, cacheUsd = 0, pricedCalls = 0, unknownCalls = 0, localCalls = 0;
   for (const entry of entries) {
     if (bankId && entry.bank_id !== bankId) continue;
-    const provider = entry.provider?.trim().toLowerCase() ?? "";
+    const recordedProvider = entry.provider?.trim().toLowerCase() ?? "";
+    const exactModel = entry.model?.trim().toLowerCase() ?? "";
+    // The ELUS owner confirmed that this specific OpenAI-compatible gateway
+    // route is billed by DeepInfra. Never remap unrelated OpenAI model routes.
+    const provider = (bankId === "Elus360" || bankId === "memo.elus360") &&
+      recordedProvider === "openai" &&
+      exactModel === "deepseek-ai/deepseek-v4.1-flash-1017"
+      ? "deepinfra" : recordedProvider;
     const model = entry.model?.trim() ?? "";
     // Only these verified local models are outside metered cloud LLM tokens.
     // Their infrastructure/electricity costs are NOT estimated here.
