@@ -56,6 +56,19 @@ async def aggregate_usage_ledger(conn, *, bank_id: str, start: datetime, end: da
             GROUP BY provider, model ORDER BY calls DESC, provider, model LIMIT $4""",
         bank_id, start, end, MAX_MODELS + 1,
     )
+    # Coverage is measurable only against *retained* llm_requests rows;
+    # traces removed by a historical retention policy cannot be reconstructed.
+    trace_table = fq_table("llm_requests")
+    coverage = await conn.fetchrow(
+        f"""SELECT COUNT(*)::bigint AS retained_traces,
+                   COUNT(*) FILTER (WHERE ledger.source_request_id IS NULL)::bigint AS unreconciled_traces,
+                   MIN(trace.started_at) AS earliest_retained_trace
+            FROM {trace_table} AS trace
+            LEFT JOIN {table} AS ledger ON ledger.source_request_id = trace.id
+            WHERE trace.bank_id = $1 AND trace.started_at >= $2
+              AND trace.started_at < $3""",
+        bank_id, start, end,
+    )
     return {
         "bank_id": bank_id,
         "source": "persistent_ledger",
@@ -65,6 +78,10 @@ async def aggregate_usage_ledger(conn, *, bank_id: str, start: datetime, end: da
             "earliest": totals["earliest"].isoformat() if totals["earliest"] else None,
             "latest": totals["latest"].isoformat() if totals["latest"] else None,
             "historical_backfill_confirmed": False,
+            "retained_traces": int(coverage["retained_traces"]),
+            "unreconciled_traces": int(coverage["unreconciled_traces"]),
+            "retained_traces_reconciled": int(coverage["unreconciled_traces"]) == 0,
+            "earliest_retained_trace": coverage["earliest_retained_trace"].isoformat() if coverage["earliest_retained_trace"] else None,
         },
         "totals": {k: int(totals[k]) for k in ("calls", "input_tokens", "output_tokens", "cached_tokens", "missing_usage")},
         "daily": [{"day": str(r["day"]), "calls": int(r["calls"])} for r in days],
