@@ -150,7 +150,7 @@ export interface LedgerUsageResponse {
   start: string;
   end: string;
   totals: { calls: number; input_tokens: number; output_tokens: number; cached_tokens: number; missing_usage: number };
-  coverage: { earliest: string | null; latest: string | null; historical_backfill_confirmed: boolean };
+  coverage: { earliest: string | null; latest: string | null; historical_backfill_confirmed: boolean; retained_traces: number; unreconciled_traces: number; retained_traces_reconciled: boolean; earliest_retained_trace: string | null };
   daily: { day: string; calls: number }[];
   models_truncated: boolean;
   models: { provider: string | null; model: string | null; calls: number; input_tokens: number; output_tokens: number; cached_tokens: number; missing_usage: number }[];
