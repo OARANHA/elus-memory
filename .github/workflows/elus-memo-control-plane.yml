@@ -53,9 +53,12 @@ jobs:
       - name: Install pinned repository dependencies
         run: npm ci --ignore-scripts
       - name: Install isolated browser runner
-        run: npm install --no-save --ignore-scripts --package-lock=false playwright@1.58.2
+        run: |
+          mkdir -p "$RUNNER_TEMP/elus-playwright"
+          npm install --prefix "$RUNNER_TEMP/elus-playwright" --no-save --ignore-scripts playwright@1.58.2
+          ln -s "$RUNNER_TEMP/elus-playwright/node_modules" hindsight-control-plane/canary/node_modules
       - name: Install Chromium
-        run: npx playwright install --with-deps chromium
+        run: "$RUNNER_TEMP/elus-playwright/node_modules/.bin/playwright" install --with-deps chromium
       - name: Start isolated component preview
         working-directory: hindsight-control-plane
         run: |
