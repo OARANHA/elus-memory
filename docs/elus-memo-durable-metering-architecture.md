@@ -39,3 +39,8 @@ A UI atual `AiCostCard` lê até 1000 `llm_requests` por banco em janela mensal.
 - O script `deploy/elus/tests/test_alembic_ledger.py` executa **o corpo real da revisão**, com adaptadores isolados para op/context/dialect, em PostgreSQL 16 efêmero; valida upgrade, registro, downgrade com histórico preservado e reupgrade. Não é um upgrade completo de toda a árvore da aplicação.
 - Evidência GitHub Actions: https://github.com/OARANHA/elus-memory/actions/runs/40281049736 — **GREEN**.
 - **Não foi executada a migração no servidor de produção nem realizado merge/deploy.** Ainda validar Alembic full `upgrade head` em ambiente espelho com tabela real existente e estratégia de desligar trigger sob falhas de gravação, antes de liberar a PR.
+
+## Gate do Alembic de aplicação — 2026-10-26
+- Script `deploy/elus/tests/test_alembic_command.py` usa **Alembic real** (`command.stamp`, `command.upgrade`, `command.downgrade`) e a `env.py` verdadeira do Hindsight em PostgreSQL isolado. Pré-requisito: esquema mínimo equivalente ao predecessor `c7e2f9a4d1b8` construído e marcado no teste. Testa criação do ledger, captura da chamada, rollback do schema preserving ledger e novo upgrade.
+- GitHub Actions https://github.com/OARANHA/elus-memory/actions/runs/40282016756 — GREEN.
+- Limite explícito: ainda não é **upgrade de todas as revisões desde base/zero**, nem snapshot de produção; é o ciclo operacional de Alembic da nossa revisão sobre predecessor marcado. Bloqueio de deploy real mantido. [verified: 2026-10-26]
