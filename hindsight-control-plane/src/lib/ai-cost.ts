@@ -91,10 +91,9 @@ export function estimateCost(
     if (bankId && entry.bank_id !== bankId) continue;
     const recordedProvider = entry.provider?.trim().toLowerCase() ?? "";
     const exactModel = entry.model?.trim().toLowerCase() ?? "";
-    // The ELUS owner confirmed that this specific OpenAI-compatible gateway
-    // route is billed by DeepInfra. Never remap unrelated OpenAI model routes.
-    const provider = (bankId === "Elus360" || bankId === "memo.elus360") &&
-      recordedProvider === "openai" &&
+    // All ELUS banks use the same verified DeepInfra OpenAI-compatible model route.
+    // Remapping is exact-model only; unrelated OpenAI routes remain untouched.
+    const provider = recordedProvider === "openai" &&
       exactModel === "deepseek-ai/deepseek-v4.1-flash-1017"
       ? "deepinfra" : recordedProvider;
     const model = entry.model?.trim() ?? "";
