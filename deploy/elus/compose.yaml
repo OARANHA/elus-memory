@@ -1,7 +1,7 @@
 # ELUS Memory self-hosted Hindsight (private until authentication is configured)
 services:
   hindsight:
-    image: ghcr.io/vectorize-io/hindsight:${HINDSIGHT_VERSION:-latest}
+    image: ${HINDSIGHT_IMAGE:-ghcr.io/vectorize-io/hindsight:latest}
     restart: unless-stopped
     environment:
       HINDSIGHT_API_LLM_PROVIDER: ${HINDSIGHT_API_LLM_PROVIDER:-openai}

@@ -1,0 +1,82 @@
+name: Elus Memo Control Plane CI
+
+on:
+  pull_request:
+    paths:
+      - "hindsight-control-plane/**"
+      - "hindsight-clients/typescript/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/elus-memo-control-plane.yml"
+  push:
+    branches: [main]
+    paths:
+      - "hindsight-control-plane/**"
+      - "hindsight-clients/typescript/**"
+      - "package.json"
+      - "package-lock.json"
+      - ".github/workflows/elus-memo-control-plane.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  control-plane:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install locked workspace dependencies
+        run: npm ci --ignore-scripts
+      - name: Build generated TypeScript client
+        run: npm run build --workspace=@vectorize-io/hindsight-client
+      - name: TypeScript
+        run: npm exec --workspace=@vectorize-io/hindsight-control-plane -- tsc --noEmit
+      - name: ESLint
+        run: npm run lint --workspace=@vectorize-io/hindsight-control-plane
+      - name: Unit tests
+        run: npm run test --workspace=@vectorize-io/hindsight-control-plane
+
+  visual-canary:
+    runs-on: ubuntu-latest
+    container:
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install pinned repository dependencies
+        run: npm ci --ignore-scripts
+      - name: Install isolated browser runner
+        run: |
+          mkdir -p "$RUNNER_TEMP/elus-playwright"
+          npm install --prefix "$RUNNER_TEMP/elus-playwright" --no-save --ignore-scripts playwright@1.58.2
+          ln -s "$RUNNER_TEMP/elus-playwright/node_modules" hindsight-control-plane/canary/node_modules
+      - name: Start isolated component preview
+        working-directory: hindsight-control-plane
+        run: |
+          npx vite --config canary/vite.config.ts > /tmp/elus-canary-vite.log 2>&1 &
+          for i in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:4179/ > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/elus-canary-vite.log
+          exit 1
+      - name: Browser gate with deterministic data
+        working-directory: hindsight-control-plane
+        run: node canary/visual-gate.mjs
+      - name: Upload desktop and mobile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: elus-memo-visual-canary
+          path: hindsight-control-plane/canary-evidence/*.png
+          if-no-files-found: warn
+          retention-days: 14
