@@ -3,7 +3,7 @@
 -- Transactional INSERT trigger ensures only successfully committed traces are counted.
 BEGIN;
 CREATE TABLE IF NOT EXISTS elus_usage_ledger (
-  source_request_id uuid PRIMARY KEY REFERENCES llm_requests(id) ON DELETE RESTRICT,
+  source_request_id uuid PRIMARY KEY, -- NO foreign key: original traces may expire
   bank_id text,
   operation text,
   scope text,
