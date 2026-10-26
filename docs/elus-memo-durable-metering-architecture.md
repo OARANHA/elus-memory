@@ -21,3 +21,9 @@ A UI atual `AiCostCard` lê até 1000 `llm_requests` por banco em janela mensal.
 - Provar commit/rollback atômico da captura, `idempotência` diante de retries, schema multi-tenant, concorrência, e performance do flush.
 - Testar migração e backfill em ambiente isolado com amostra sintética; verificar reversão preservando dados. Sem migração/batch em produção antes desses gates.
 - Concluir o CI do Control Plane desta PR.
+
+## SQL candidata adicionada (ainda não executada)
+- `deploy/elus/migrations/001_usage_ledger_candidate.sql`: tabela sem FK para `llm_requests` (deve sobreviver à retenção), trigger transacional `AFTER INSERT` e unicidade de `source_request_id`. Captura **uso bruto**, sem valor monetário presumido; preço/versionamento serão tratados por trilha separada.
+- `deploy/elus/migrations/002_usage_ledger_backfill_example.sql`: modelo manual de backfill em fatias diárias UTC, idempotente; é **um exemplo parametrizável**, não executar como está em produção.
+- **Bloqueios antes de ativar**: resolver o head Alembic upstream; parametrizar schema por tenant e testar permissões; garantir que exceção do trigger não provoque indisponibilidade do gravador de traces; testar performance de gravação/retention e dados sintéticos; definir plano de rollback da trigger sem descartar ledger.
+- O SQL usa tabelas não qualificadas e requer o `search_path` correto **deliberadamente não inferido**; execução automatizada sem validação do schema é proibida.
