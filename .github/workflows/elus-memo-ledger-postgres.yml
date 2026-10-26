@@ -41,6 +41,12 @@ jobs:
         run: python3 -m pip install --break-system-packages psycopg2-binary
       - name: Execute Alembic upgrade and downgrade on isolated PostgreSQL
         run: python3 deploy/elus/tests/test_alembic_ledger.py
+      - name: Install Hindsight migration runtime
+        run: python3 -m pip install --break-system-packages -e ./hindsight-api-slim
+      - name: Alembic command upgrade and downgrade on stamped predecessor
+        env:
+          HINDSIGHT_API_DATABASE_URL: postgresql://postgres:test-only@127.0.0.1:5432/usage_ledger_test
+        run: python3 deploy/elus/tests/test_alembic_command.py
       - name: Real PostgreSQL transactional ledger smoke
         env:
           PGPASSWORD: test-only
