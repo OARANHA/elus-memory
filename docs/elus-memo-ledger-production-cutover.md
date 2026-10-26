@@ -86,3 +86,10 @@ docker inspect CONTÊINER --format '{{json .Mounts}}' | jq '[.[] | {Type,Name,De
 - Alembic Python rodado em contêiner efêmero, rede exclusiva do clone, fonte PR #7 montada somente leitura: `ALEMBIC_UPGRADE_CONCLUIDO`.
 - Pós-upgrade: `public.alembic_version=e1u5c0st2026`; `public.elus_usage_ledger` existe e tem 0 linhas (sem backfill); `llm_requests=12311`; trigger `trg_elus_usage_ledger_insert` presente.
 - Próximos gates: prova de captura e rollback transacional em clone; backfill idempotente; downgrade/reupgrade no clone; revisão e CI; nenhuma migração em produção.
+
+## Testes em clone real concluídos (26/10/2026; evidência operador)
+- Backup lógico íntegro e restaurado, PostgreSQL 18 + pgvector 0.8.5; 12.311 llm_requests preservados.
+- Alembic predecessor `c7e2f9a4d1b8` → `e1u5c0st2026` GREEN no clone; ledger criado inicialmente vazio e trigger instalado.
+- Trigger transacional: INSERT sintético 1 ledger, ROLLBACK => 12.311 traces e zero ledger, GREEN.
+- Backfill de 100 traces: primeiro INSERT 100; replay 0; ROLLBACK => zero ledger, GREEN.
+- Downgrade → predecessor preservou linha de ledger, removeu trigger; reupgrade reinstalou trigger; linha sintética apagada após teste: GREEN. **Ainda requer reconciliação final de contagens/revisões no clone e gates de implantação; nenhum deploy executado.**
