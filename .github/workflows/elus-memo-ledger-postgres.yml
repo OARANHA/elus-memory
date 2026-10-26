@@ -5,6 +5,9 @@ on:
       - "deploy/elus/migrations/**"
       - "deploy/elus/tests/**"
       - "hindsight-api-slim/hindsight_api/alembic/versions/**"
+      - "hindsight-api-slim/hindsight_api/engine/elus_usage_ledger.py"
+      - "hindsight-api-slim/hindsight_api/api/http.py"
+      - "hindsight-api-slim/tests/test_elus_usage_ledger.py"
       - ".github/workflows/elus-memo-ledger-postgres.yml"
   push:
     branches: [main]
@@ -47,6 +50,10 @@ jobs:
         env:
           HINDSIGHT_API_DATABASE_URL: postgresql://postgres:test-only@127.0.0.1:5432/usage_ledger_test
         run: python3 deploy/elus/tests/test_alembic_command.py
+      - name: Test bounded ledger aggregation helper
+        run: |
+          python3 -m pip install --break-system-packages pytest pytest-asyncio
+          python3 -m pytest -q hindsight-api-slim/tests/test_elus_usage_ledger.py
       - name: Populated predecessor upgrade, replay and retention
         env:
           HINDSIGHT_API_DATABASE_URL: postgresql://postgres:test-only@127.0.0.1:5432/usage_ledger_test
