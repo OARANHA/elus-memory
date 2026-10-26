@@ -73,3 +73,9 @@ docker inspect CONTÊINER --format '{{json .Mounts}}' | jq '[.[] | {Type,Name,De
 - Binários executáveis presentes em `/home/hindsight/.pg0/installation/18.1.0/bin/`: `pg_dump`, `pg_restore`, `pg_basebackup`.
 - `du -sh /home/hindsight/.pg0/instances/hindsight/data` = `194M`; host tinha 33G disponíveis, 84% ocupado. São métricas distintas; tamanho do dump não está determinado.
 - Próximo passo: confirmar conexão sem expor senhas, testar permissões e inventariar DB/schemas via leitura; escolher destino protegido fora do volume `.pg0`, criar dump com ferramentas 18.1, restringir modo 0600 e ensaiar restore isolado. Nada executado ainda.
+
+## Preflight pg_isready + volume host (26/10/2026)
+- `pg_isready -h 127.0.0.1 -p 5432` no contêiner Hindsight retorna `accepting connections`.
+- `docker volume inspect elus-memory_hindsight_data`: Mountpoint `/var/lib/docker/volumes/elus-memory_hindsight_data/_data`.
+- `df -h /var/lib/docker`: `/dev/sda1` 193G / 161G usado / 33G disponível (84%).
+- Próximo gate: validar autenticação/permissões de dump com `psql` local como usuário de serviço, sem divulgar segredos; preparar destino de backup 0700 fora do `.pg0`, confirmar restore isolado. pg_isready não comprova acesso autenticado.
