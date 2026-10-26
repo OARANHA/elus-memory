@@ -32,7 +32,9 @@ jobs:
           --health-retries 12
     steps:
       - uses: actions/checkout@v4
-      - name: Verify canonical Alembic revision graph\n        run: python3 deploy/elus/tests/check_alembic_heads.py\n      - name: Install PostgreSQL client
+      - name: Verify canonical Alembic revision graph
+        run: python3 deploy/elus/tests/check_alembic_heads.py
+      - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
       - name: Real PostgreSQL transactional ledger smoke
         env:
