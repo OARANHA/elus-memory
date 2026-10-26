@@ -44,3 +44,8 @@ A UI atual `AiCostCard` lê até 1000 `llm_requests` por banco em janela mensal.
 - Script `deploy/elus/tests/test_alembic_command.py` usa **Alembic real** (`command.stamp`, `command.upgrade`, `command.downgrade`) e a `env.py` verdadeira do Hindsight em PostgreSQL isolado. Pré-requisito: esquema mínimo equivalente ao predecessor `c7e2f9a4d1b8` construído e marcado no teste. Testa criação do ledger, captura da chamada, rollback do schema preserving ledger e novo upgrade.
 - GitHub Actions https://github.com/OARANHA/elus-memory/actions/runs/40282016756 — GREEN.
 - Limite explícito: ainda não é **upgrade de todas as revisões desde base/zero**, nem snapshot de produção; é o ciclo operacional de Alembic da nossa revisão sobre predecessor marcado. Bloqueio de deploy real mantido. [verified: 2026-10-26]
+
+## Gate full base-to-head do Hindsight em PG isolado (26/10/2026)
+- Teste `deploy/elus/tests/test_alembic_full_chain.py`: **sem stamp** de predecessor, `alembic upgrade head` percorre todas as revisões desde um schema vazio, usando ambiente e runtime reais do Hindsight; confirma `alembic_version=e1u5c0st2026`, tabelas `llm_requests` e `elus_usage_ledger`.
+- No PostgreSQL genérico (sem extensão vector), o gate falhou; CI foi ajustado para `pgvector/pgvector:pg16` e o gate completo ficou **GREEN**: https://github.com/OARANHA/elus-memory/actions/runs/40282804101. O insucesso intermediário não era prova de erro da migração ELUS; o pré-requisito da extensão estava ausente.
+- Isso valida bootstrap em banco vazio, **não** um clone anonimizado do banco real, plano de backup/rollback de Portainer, nem desempenho com volume de produção. PR permanece draft; sem migração em produção.
