@@ -27,3 +27,8 @@ A UI atual `AiCostCard` lê até 1000 `llm_requests` por banco em janela mensal.
 - `deploy/elus/migrations/002_usage_ledger_backfill_example.sql`: modelo manual de backfill em fatias diárias UTC, idempotente; é **um exemplo parametrizável**, não executar como está em produção.
 - **Bloqueios antes de ativar**: resolver o head Alembic upstream; parametrizar schema por tenant e testar permissões; garantir que exceção do trigger não provoque indisponibilidade do gravador de traces; testar performance de gravação/retention e dados sintéticos; definir plano de rollback da trigger sem descartar ledger.
 - O SQL usa tabelas não qualificadas e requer o `search_path` correto **deliberadamente não inferido**; execução automatizada sem validação do schema é proibida.
+
+## Gate PostgreSQL isolado, 2026-10-26
+- Workflow `.github/workflows/elus-memo-ledger-postgres.yml` usa Postgres 16 efêmero e executa `deploy/elus/tests/usage_ledger.pg.sql`.
+- Testes confirmados no CI: trigger captura eventos, idempotência no replay do backfill, rollback de trace não deixa uso, exclusão do trace não elimina o ledger, CHECK rejeita tokens negativos, e isolamento entre schemas `public` e `tenant_b` mesmo com `search_path` do cliente diferente. Registro por trigger usa `TG_TABLE_SCHEMA` com `format('%I', ...)`.
+- Evidência: https://github.com/OARANHA/elus-memory/actions/runs/40277503683 (GREEN). **Não equivale a upgrade Alembic, captura de preços nem histórico em produção.**
