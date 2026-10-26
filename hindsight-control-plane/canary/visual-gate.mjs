@@ -13,7 +13,7 @@ try {
     await page.getByText("Custo estimado de IA").waitFor();
     await page.getByText("Mês atual").waitFor();
     await page.getByText("DeepSeek-V4-Flash-0731").waitFor();
-    await page.getByText(/chamadas sem custo precificado/).waitFor();
+    await page.getByText(/chamadas externas sem custo calculável/).waitFor();
     const numbers = await page.locator("body").innerText();
     assert.match(numbers, /estimativa, não é fatura/);
     assert.ok(!numbers.includes("NaN"));
