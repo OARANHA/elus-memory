@@ -31,7 +31,8 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
       let total = 0;
       let fetched = 0;
       const seen = new Set<string>();
-      for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
+      let offset = 0;
+      while (offset < MAX_ROWS) {
         const response = await client.listLLMRequests(bankId, { start_date: month.toISOString(), limit: PAGE_SIZE, offset });
         for (const entry of response.items) {
           // Offset pages can overlap while new traces arrive; avoid billing an id twice.
@@ -42,7 +43,8 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
         }
         total = response.total;
         fetched += response.items.length;
-        if (offset + response.items.length >= response.total || response.items.length === 0) break;
+        offset += response.items.length;
+        if (offset >= response.total || response.items.length === 0) break;
       }
       if (!cancelled) {
         setState({
