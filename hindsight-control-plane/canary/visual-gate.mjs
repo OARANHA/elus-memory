@@ -29,7 +29,7 @@ try {
     await page.goto("http://127.0.0.1:4179/?bank=paginated", { waitUntil: "networkidle" });
     const paginated = await page.locator("body").innerText();
     assert.match(paginated, /4 chamadas|4/);
-    assert.match(paginated, /Cobertura histórica não certificada/);
+    assert.match(paginated, /Todos os traces ainda retidos nesta janela estão reconciliados/);
     await page.screenshot({ path: `canary-evidence/${name}-paginated.png`, fullPage: true });
     await page.goto("http://127.0.0.1:4179/?bank=empty", { waitUntil: "networkidle" });
     await page.getByText("Sem consumo registrado").first().waitFor();
