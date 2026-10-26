@@ -5,6 +5,7 @@ on:
     branches:
       - main
       - feat/elus-memo-ai-cost-card-20261025
+      - feat/elus-memo-durable-metering-foundation-20261026
     paths:
       - "hindsight-control-plane/**"
       - "hindsight-clients/typescript/**"

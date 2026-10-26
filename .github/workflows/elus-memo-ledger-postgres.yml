@@ -1,0 +1,80 @@
+name: ELUS Memo Ledger PostgreSQL Gate
+on:
+  pull_request:
+    paths:
+      - "deploy/elus/migrations/**"
+      - "deploy/elus/tests/**"
+      - "deploy/elus/tools/**"
+      - "hindsight-api-slim/hindsight_api/alembic/versions/**"
+      - "hindsight-api-slim/hindsight_api/engine/elus_usage_ledger.py"
+      - "hindsight-api-slim/hindsight_api/api/http.py"
+      - "hindsight-api-slim/tests/test_elus_usage_ledger.py"
+      - ".github/workflows/elus-memo-ledger-postgres.yml"
+  push:
+    branches: [main]
+    paths:
+      - "deploy/elus/migrations/**"
+      - "deploy/elus/tests/**"
+      - ".github/workflows/elus-memo-ledger-postgres.yml"
+permissions:
+  contents: read
+jobs:
+  ledger-postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_PASSWORD: test-only
+          POSTGRES_DB: usage_ledger_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d usage_ledger_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile production backfill executor
+        run: python3 -m py_compile deploy/elus/tools/production_usage_backfill.py
+      - name: Verify canonical Alembic revision graph
+        run: python3 deploy/elus/tests/check_alembic_heads.py
+      - name: Install PostgreSQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Install isolated migration test driver
+        run: python3 -m pip install --break-system-packages psycopg2-binary
+      - name: Execute Alembic upgrade and downgrade on isolated PostgreSQL
+        run: python3 deploy/elus/tests/test_alembic_ledger.py
+      - name: Install Hindsight migration runtime
+        run: python3 -m pip install --break-system-packages -e ./hindsight-api-slim
+      - name: Alembic command upgrade and downgrade on stamped predecessor
+        env:
+          HINDSIGHT_API_DATABASE_URL: postgresql://postgres:test-only@127.0.0.1:5432/usage_ledger_test
+        run: python3 deploy/elus/tests/test_alembic_command.py
+      - name: Test bounded ledger aggregation helper
+        run: |
+          python3 -m pip install --break-system-packages pytest pytest-asyncio
+          python3 -m pytest -o addopts='' -q hindsight-api-slim/tests/test_elus_usage_ledger.py
+      - name: Populated predecessor upgrade, replay and retention
+        env:
+          HINDSIGHT_API_DATABASE_URL: postgresql://postgres:test-only@127.0.0.1:5432/usage_ledger_test
+        run: python3 deploy/elus/tests/test_alembic_populated.py
+      - name: Full Hindsight Alembic chain from empty schema
+        env:
+          HINDSIGHT_API_DATABASE_URL: postgresql://postgres:test-only@127.0.0.1:5432/usage_ledger_test
+        run: python3 deploy/elus/tests/test_alembic_full_chain.py
+      - name: pg_dump and pg_restore disaster recovery gate
+        run: docker run --rm --network host -v "$PWD:$PWD" -w "$PWD" postgres:16 bash deploy/elus/tests/test_backup_restore.sh
+      - name: Real PostgreSQL transactional ledger smoke
+        env:
+          PGPASSWORD: test-only
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d usage_ledger_test -f deploy/elus/tests/usage_ledger.pg.sql
+
+      - name: Historical backfill and replay after isolated transactional smoke
+        env:
+          PGPASSWORD: test-only
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d usage_ledger_test -f deploy/elus/tests/usage_ledger_backfill.pg.sql

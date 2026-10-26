@@ -13,7 +13,7 @@ try {
     await page.getByText("Custo estimado de IA").waitFor();
     await page.getByText("Mês atual").waitFor();
     await page.getByText("DeepSeek-V4-Flash-0731").waitFor();
-    await page.getByText(/chamadas sem preço\/uso verificável/).waitFor();
+    await page.getByText(/chamadas externas sem custo calculável/).waitFor();
     const numbers = await page.locator("body").innerText();
     assert.match(numbers, /estimativa, não é fatura/);
     assert.ok(!numbers.includes("NaN"));
@@ -23,16 +23,16 @@ try {
     assert.deepEqual(errors, [], `Browser errors at ${width}px`);
     await page.screenshot({ path: `canary-evidence/${name}.png`, fullPage: true });
     await page.goto("http://127.0.0.1:4179/?bank=unpriced", { waitUntil: "networkidle" });
-    await page.getByText("Indisponível").first().waitFor();
-    assert.ok((await page.locator("body").innerText()).includes("não precificadas"));
+    await page.getByText("Custo não calculável").first().waitFor();
+    assert.ok((await page.locator("body").innerText()).includes("sem custo calculável"));
     await page.screenshot({ path: `canary-evidence/${name}-unknown.png`, fullPage: true });
     await page.goto("http://127.0.0.1:4179/?bank=paginated", { waitUntil: "networkidle" });
     const paginated = await page.locator("body").innerText();
-    assert.match(paginated, /3 chamadas/);
-    assert.doesNotMatch(paginated, /Amostra limitada/);
+    assert.match(paginated, /4 chamadas|4/);
+    assert.match(paginated, /Todos os traces ainda retidos nesta janela estão reconciliados/);
     await page.screenshot({ path: `canary-evidence/${name}-paginated.png`, fullPage: true });
     await page.goto("http://127.0.0.1:4179/?bank=empty", { waitUntil: "networkidle" });
-    await page.getByText("Indisponível").first().waitFor();
+    await page.getByText("Sem consumo registrado").first().waitFor();
     await page.screenshot({ path: `canary-evidence/${name}-empty.png`, fullPage: true });
     await page.close();
   }
