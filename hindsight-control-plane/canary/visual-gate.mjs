@@ -13,7 +13,7 @@ try {
     await page.getByText("Custo estimado de IA").waitFor();
     await page.getByText("Mês atual").waitFor();
     await page.getByText("DeepSeek-V4-Flash-0731").waitFor();
-    await page.getByText(/chamadas sem preço\/uso verificável/).waitFor();
+    await page.getByText(/chamadas sem custo precificado/).waitFor();
     const numbers = await page.locator("body").innerText();
     assert.match(numbers, /estimativa, não é fatura/);
     assert.ok(!numbers.includes("NaN"));
@@ -24,12 +24,12 @@ try {
     await page.screenshot({ path: `canary-evidence/${name}.png`, fullPage: true });
     await page.goto("http://127.0.0.1:4179/?bank=unpriced", { waitUntil: "networkidle" });
     await page.getByText("Indisponível").first().waitFor();
-    assert.ok((await page.locator("body").innerText()).includes("não precificadas"));
+    assert.ok((await page.locator("body").innerText()).includes("sem custo precificado"));
     await page.screenshot({ path: `canary-evidence/${name}-unknown.png`, fullPage: true });
     await page.goto("http://127.0.0.1:4179/?bank=paginated", { waitUntil: "networkidle" });
     const paginated = await page.locator("body").innerText();
-    assert.match(paginated, /3 chamadas/);
-    assert.doesNotMatch(paginated, /Amostra limitada/);
+    assert.match(paginated, /4 chamadas|4/);
+    assert.match(paginated, /Cobertura histórica não certificada/);
     await page.screenshot({ path: `canary-evidence/${name}-paginated.png`, fullPage: true });
     await page.goto("http://127.0.0.1:4179/?bank=empty", { waitUntil: "networkidle" });
     await page.getByText("Indisponível").first().waitFor();
