@@ -16,6 +16,10 @@ export interface ModelRate {
 // Confirm billing currency/unit independently before treating estimates as invoices.
 // A missing cachedInput rate is intentionally undefined, not zero.
 export const MODEL_RATES: readonly ModelRate[] = [
+  // Confirmed DeepInfra billing route in ELUS. Official model API listed promotional Standard
+  // rates at inspection; discounts and billing tiers can change independently of code.
+  // https://deepinfra.com/deepseek-ai/DeepSeek-V4.1-Flash-1017/api
+  { provider: "deepinfra", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017", input: 0.098, output: 0.294, cachedInput: 0.003, source: "DeepInfra official model API page; promotional Standard, subject to change", checkedAt: "2026-10-25" },
   { provider: "deepinfra", model: "DeepSeek-V4.1-Flash-1017", input: 0.098, output: 0.294, cachedInput: 0.003, source: "Tabela DeepInfra informada pelo proprietário", checkedAt: "2026-10-25" },
   { provider: "deepinfra", model: "NVIDIA-Nemotron-3.5-Super-VL", input: 0.15, output: 0.5, cachedInput: 0.02, source: "Tabela DeepInfra informada pelo proprietário", checkedAt: "2026-10-25" },
   { provider: "deepinfra", model: "Step-5-Preview", input: 1, output: 2.7, cachedInput: 0.1, source: "Tabela DeepInfra informada pelo proprietário", checkedAt: "2026-10-25" },
@@ -62,16 +66,6 @@ export const MODEL_RATES: readonly ModelRate[] = [
   { provider: "deepinfra", model: "Qwen3.8-Flash", input: 0.113, output: 0.382, cachedInput: 0.014, source: "Tabela DeepInfra informada pelo proprietário", checkedAt: "2026-10-25" },
   { provider: "deepinfra", model: "Qwen3.8-Max", input: 1.65, output: 4.951, cachedInput: 0.206, source: "Tabela DeepInfra informada pelo proprietário", checkedAt: "2026-10-25" }
 ];
-
-// DeepInfra publicly lists these STANDARD (undiscounted) rates for the exact 1017 model.
-// Promotional and Flex/Priority prices differ; this is not an invoice.
-// https://deepinfra.com/deepseek-ai/DeepSeek-V4.1-Flash-1017/api
-MODEL_RATES.push({
-  provider: "deepinfra", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017",
-  input: 0.20, output: 0.60, cachedInput: 0.006,
-  source: "DeepInfra official model page — undiscounted Standard list price",
-  checkedAt: "2026-10-25",
-});
 
 export interface CostSummary {
   knownUsd: number;
