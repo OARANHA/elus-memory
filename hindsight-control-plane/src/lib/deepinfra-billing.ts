@@ -54,6 +54,9 @@ export async function readDeepInfraBilling(key: string, period: string, fetcher:
     period,
     fetchedAt: new Date().toISOString(),
     billingUnit: "unverified",
+    // The owner confirmed the checklist values -5 and 1.24 alongside usage 124
+    // in Oct 2026. This is a conditional inference, not an invoice guarantee.
+    balanceUnit: "usd_estimated",
     usage: {
       months: usage.months.map(m => ({
         period: m.period, total_cost_raw: m.total_cost, invoice_id: m.invoice_id,
