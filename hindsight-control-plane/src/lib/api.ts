@@ -144,6 +144,19 @@ export interface AuditStatsResponse {
   buckets: AuditStatsBucket[];
 }
 
+export interface LedgerUsageResponse {
+  bank_id: string;
+  source: "persistent_ledger";
+  start: string;
+  end: string;
+  totals: { calls: number; input_tokens: number; output_tokens: number; cached_tokens: number; missing_usage: number };
+  coverage: { earliest: string | null; latest: string | null; historical_backfill_confirmed: boolean };
+  daily: { day: string; calls: number }[];
+  models_truncated: boolean;
+  models: { provider: string | null; model: string | null; calls: number; input_tokens: number; output_tokens: number; cached_tokens: number; missing_usage: number }[];
+  estimated_cost_usd: null;
+}
+
 export interface LLMRequestEntry {
   id: string;
   bank_id: string | null;
@@ -2533,6 +2546,14 @@ export class ControlPlaneClient {
     const query = params.toString();
     return this.fetchApi<AuditStatsResponse>(
       bankApi(bankId, `/audit-logs/stats${query ? `?${query}` : ""}`)
+    );
+  }
+
+  async readUsageLedger(bankId: string, start: string, end: string): Promise<LedgerUsageResponse> {
+    const params = new URLSearchParams({ start_date: start, end_date: end });
+    return this.fetchApi<LedgerUsageResponse>(
+      bankApi(bankId, `/elus-usage-ledger?${params.toString()}`),
+      { cache: "no-store" },
     );
   }
 
