@@ -4,6 +4,7 @@ on:
     paths:
       - "deploy/elus/migrations/**"
       - "deploy/elus/tests/**"
+      - "hindsight-api-slim/hindsight_api/alembic/versions/**"
       - ".github/workflows/elus-memo-ledger-postgres.yml"
   push:
     branches: [main]
@@ -36,6 +37,10 @@ jobs:
         run: python3 deploy/elus/tests/check_alembic_heads.py
       - name: Install PostgreSQL client
         run: sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+      - name: Install isolated migration test driver
+        run: python3 -m pip install --break-system-packages psycopg2-binary
+      - name: Execute Alembic upgrade and downgrade on isolated PostgreSQL
+        run: python3 deploy/elus/tests/test_alembic_ledger.py
       - name: Real PostgreSQL transactional ledger smoke
         env:
           PGPASSWORD: test-only
