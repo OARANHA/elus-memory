@@ -70,7 +70,8 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
   const month = data ? priceLedger(data.month) : null;
   const today = data ? priceLedger(data.today) : null;
   const daily = data?.month.daily.slice(-7) ?? [];
-  const partial = !!data && (data.month.models_truncated || !data.month.coverage.historical_backfill_confirmed);
+  const externalUnknown = !!month && month.unpricedCalls > 0;
+  const coverageUnverified = !!data && !data.month.coverage.historical_backfill_confirmed;
   const costLabel = (projection: Projection, calls: number) =>
     projection.pricedCalls > 0 ? usd(projection.knownUsd) :
     calls === 0 ? "Sem consumo registrado" :
@@ -115,11 +116,19 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
           {month.rows.map((r,i)=><li key={i} className="flex min-w-0 flex-wrap justify-between gap-2"><span className="break-all">{r.name} · {count(r.calls)} chamadas</span><span>{r.local ? "Processamento local · custo de API não aplicável" : r.value===null ? "Sem tarifa ou tokens verificáveis" : usd(r.value)}</span></li>)}
         </ul>
         <p className="mt-2 text-xs text-muted-foreground">Processamento local: {count(month.localCalls)} chamadas. Infraestrutura não incluída.</p>
-        {(month.unpricedCalls > 0 || data.month.totals.missing_usage > 0 || partial) &&
-          <p role="status" className="mt-3 text-xs text-amber-700 dark:text-amber-400">
-            {count(month.unpricedCalls)} chamadas externas sem custo calculável; {count(data.month.totals.missing_usage)} registros sem tokens informados (incluindo processamento local).
-            {partial ? " Cobertura histórica não certificada: o backfill anterior à ativação do ledger não foi confirmado." : ""}
-          </p>}
+        {externalUnknown && <p role="status" className="mt-3 text-xs text-amber-700 dark:text-amber-400">
+          {count(month.unpricedCalls)} chamadas externas sem custo calculável. Verifique tarifas e tokens do provedor.
+        </p>}
+        {data.month.totals.missing_usage > 0 && <p className="mt-2 text-xs text-muted-foreground">
+          {count(data.month.totals.missing_usage)} chamadas sem contagem de tokens, incluindo processamento local; isso não implica falha de cobrança.
+        </p>}
+        {coverageUnverified && <p role="status" className="mt-2 text-xs text-muted-foreground">
+          Histórico anterior à captura persistente ainda não reconciliado. Primeira ocorrência armazenada nesta janela: {data.month.coverage.earliest ?? "não registrada"}.
+          Não confundir ausência de registros com custo zero.
+        </p>}
+        {data.month.models_truncated && <p role="status" className="mt-2 text-xs text-amber-700 dark:text-amber-400">
+          A lista de modelos está limitada; os custos apresentados podem ser parciais.
+        </p>}
         <p className="mt-2 text-xs text-muted-foreground">Fonte: ledger persistente. Janela UTC {data.month.start.slice(0,10)} a {data.month.end.slice(0,10)}; primeira ocorrência na janela: {data.month.coverage.earliest ?? "não registrada"}. Valores não representam faturamento conciliado.</p>
        </>}
     </section>
