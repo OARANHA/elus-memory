@@ -64,15 +64,14 @@ jobs:
         run: python3 deploy/elus/tests/test_alembic_full_chain.py
       - name: pg_dump and pg_restore disaster recovery gate
         run: docker run --rm --network host -v "$PWD:$PWD" -w "$PWD" postgres:16 bash deploy/elus/tests/test_backup_restore.sh
-      - name: Idempotent retained-trace backfill and replay on isolated database
-        env:
-          PGPASSWORD: test-only
-        run: |
-          for i in 1 2; do
-            psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d usage_ledger_test -f deploy/elus/migrations/003_usage_ledger_retained_trace_backfill.sql
-          done
       - name: Real PostgreSQL transactional ledger smoke
         env:
           PGPASSWORD: test-only
         run: |
           psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d usage_ledger_test -f deploy/elus/tests/usage_ledger.pg.sql
+
+      - name: Historical backfill and replay after isolated transactional smoke
+        env:
+          PGPASSWORD: test-only
+        run: |
+          psql -X -v ON_ERROR_STOP=1 -h 127.0.0.1 -U postgres -d usage_ledger_test -f deploy/elus/tests/usage_ledger_backfill.pg.sql
