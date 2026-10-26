@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { CreditIndicator } from "@/components/credit-indicator";
 import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -906,6 +907,8 @@ function BankSelectorInner() {
             )}
           </DropdownMenuContent>
         </DropdownMenu>
+
+        <CreditIndicator />
 
         <div className="hidden md:contents">
           {/* GitHub Link */}
