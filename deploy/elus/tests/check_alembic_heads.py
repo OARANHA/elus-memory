@@ -2,7 +2,7 @@
 import ast
 from pathlib import Path
 
-VERSIONS = Path(__file__).resolve().parents[2] / "hindsight-api-slim/hindsight_api/alembic/versions"
+VERSIONS = Path(__file__).resolve().parents[3] / "hindsight-api-slim/hindsight_api/alembic/versions"
 
 
 def parse_revisions(root: Path = VERSIONS) -> tuple[dict[str, Path], set[str]]:
