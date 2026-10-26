@@ -79,3 +79,10 @@ docker inspect CONTÊINER --format '{{json .Mounts}}' | jq '[.[] | {Type,Name,De
 - `docker volume inspect elus-memory_hindsight_data`: Mountpoint `/var/lib/docker/volumes/elus-memory_hindsight_data/_data`.
 - `df -h /var/lib/docker`: `/dev/sda1` 193G / 161G usado / 33G disponível (84%).
 - Próximo gate: validar autenticação/permissões de dump com `psql` local como usuário de serviço, sem divulgar segredos; preparar destino de backup 0700 fora do `.pg0`, confirmar restore isolado. pg_isready não comprova acesso autenticado.
+
+## Gate comprovado pelo operador: restore real e Alembic PG18 GREEN (26/10/2026)
+- Backup real de 51 MB, SHA256 `9b3ee2e1a4760e7d9ce865b661849c0335a51a4b099ef7d83bf35afe4bc151e8` restaurado via `pg_restore --exit-on-error` em clone `elus-memo-restore-test`, `network=none`, volume `elus-memo-restore-test-data`, 25 tabelas, extensões `vector 0.8.5`, `pg_trgm 1.6`, `btree_gin 1.3`.
+- Clone tinha `public.alembic_version=c7e2f9a4d1b8`, `llm_requests=12311`, ledger ausente. Código PR #7 checkout `755adcf210a2ad73c8696e7ade661ca4a90ff55f`.
+- Alembic Python rodado em contêiner efêmero, rede exclusiva do clone, fonte PR #7 montada somente leitura: `ALEMBIC_UPGRADE_CONCLUIDO`.
+- Pós-upgrade: `public.alembic_version=e1u5c0st2026`; `public.elus_usage_ledger` existe e tem 0 linhas (sem backfill); `llm_requests=12311`; trigger `trg_elus_usage_ledger_insert` presente.
+- Próximos gates: prova de captura e rollback transacional em clone; backfill idempotente; downgrade/reupgrade no clone; revisão e CI; nenhuma migração em produção.
