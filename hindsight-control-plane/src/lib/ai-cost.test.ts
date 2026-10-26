@@ -58,6 +58,17 @@ describe("estimateCost", () => {
     expect(result.unknownReasons.map((r) => r.reason)).toContain("Sem tarifa cadastrada");
     expect(result.unknownReasons.map((r) => r.reason)).toContain("Tokens ausentes");
   });
+  it("separates verified local embedding and reranking calls from unknown cloud billing", () => {
+    const result = estimateCost([
+      entry({ id: "embed", provider: "local", model: "BAAI/bge-small-en-v1.5" }),
+      entry({ id: "rerank", provider: "local", model: "cross-encoder/ms-marco-MiniLM-L-6-v2" }),
+      entry({ id: "llm", provider: "openai", model: "deepseek-ai/DeepSeek-V4.1-Flash-1017" }),
+    ], [rate]);
+    expect(result.localCalls).toBe(2);
+    expect(result.unknownCalls).toBe(1);
+    expect(result.pricedCalls).toBe(0);
+    expect(result.unknownReasons[0].reason).toContain("origem de cobrança não verificada");
+  });
   it("rejects invalid token accounting", () => {
     expect(estimateCost([entry({ cached_tokens: 1_000_001 })], [rate]).unknownCalls).toBe(1);
   });
