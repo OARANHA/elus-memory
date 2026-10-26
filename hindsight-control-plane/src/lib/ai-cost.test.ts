@@ -42,6 +42,12 @@ describe("estimateCost", () => {
     );
     expect(r.pricedCalls).toBe(1);
   });
+  it("prefers exact namespaced prices over any short-name alias", () => {
+    const exact = { ...rate, model: "org/test/model", input: 3 };
+    const short = { ...rate, model: "model", input: 1 };
+    const r = estimateCost([entry({ model: "org/test/model", cached_tokens: 0 })], [short, exact]);
+    expect(r.inputUsd).toBe(3);
+  });
   it("rejects invalid token accounting", () => {
     expect(estimateCost([entry({ cached_tokens: 1_000_001 })], [rate]).unknownCalls).toBe(1);
   });
