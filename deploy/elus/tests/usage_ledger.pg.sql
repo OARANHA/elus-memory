@@ -11,7 +11,7 @@ CREATE TABLE llm_requests (
 INSERT INTO llm_requests(id, bank_id, operation, provider, model, status, input_tokens,
  output_tokens, started_at)
 VALUES ('11111111-1111-4111-8111-111111111111','bank-a','retain','openai','model-a','success',
- 100,20,'2026-10-26T11:00:00Z');
+ 100,20,'2026-10-01T11:00:00Z');
 DO $$
 BEGIN
  IF (SELECT count(*) FROM elus_usage_ledger) != 1 THEN RAISE EXCEPTION 'Insert trigger not atomic'; END IF;
