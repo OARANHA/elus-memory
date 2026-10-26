@@ -7,7 +7,11 @@ import { estimateCost, type CostSummary } from "@/lib/ai-cost";
 
 const PAGE_SIZE = 100;
 const MAX_ROWS = 5000;
-const money = (n: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 6 }).format(n);
+const money = (n: number) => new Intl.NumberFormat("pt-BR", {
+  style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 6,
+}).format(n);
+const displayCost = (summary: CostSummary) =>
+  summary.pricedCalls === 0 ? "Indisponível" : money(summary.knownUsd);
 
 export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boolean }) {
   const [state, setState] = useState<{ today: CostSummary; month: CostSummary; partial: boolean } | null>(null);
@@ -26,9 +30,16 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
       const entries: LLMRequestEntry[] = [];
       let total = 0;
       let fetched = 0;
+      const seen = new Set<string>();
       for (let offset = 0; offset < MAX_ROWS; offset += PAGE_SIZE) {
         const response = await client.listLLMRequests(bankId, { start_date: month.toISOString(), limit: PAGE_SIZE, offset });
-        entries.push(...response.items.filter((e) => e.bank_id === bankId));
+        for (const entry of response.items) {
+          // Offset pages can overlap while new traces arrive; avoid billing an id twice.
+          if (entry.bank_id === bankId && !seen.has(entry.id)) {
+            seen.add(entry.id);
+            entries.push(entry);
+          }
+        }
         total = response.total;
         fetched += response.items.length;
         if (offset + response.items.length >= response.total || response.items.length === 0) break;
@@ -56,21 +67,21 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
         !state ? <p className="text-sm text-muted-foreground" role="status">Calculando a partir das requisições registradas…</p> :
         <>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div><p className="text-xs text-muted-foreground">Hoje</p><p className="text-2xl font-semibold tabular-nums">{money(state.today.knownUsd)}</p></div>
-            <div><p className="text-xs text-muted-foreground">Mês atual</p><p className="text-2xl font-semibold tabular-nums">{money(state.month.knownUsd)}</p></div>
+            <div><p className="text-xs text-muted-foreground">Hoje</p><p className="text-2xl font-semibold tabular-nums">{displayCost(state.today)}</p></div>
+            <div><p className="text-xs text-muted-foreground">Mês atual</p><p className="text-2xl font-semibold tabular-nums">{displayCost(state.month)}</p></div>
           </div>
           <p className="mt-3 text-xs text-muted-foreground">
             Banco: {bankId} · Entrada {money(state.month.inputUsd)} · Saída {money(state.month.outputUsd)} · Cache {money(state.month.cacheUsd)}
           </p>
           {state.month.rows.length > 0 && <ul className="mt-3 space-y-1 text-xs text-muted-foreground">
-            {state.month.rows.map((r) => <li key={r.provider + "/" + r.model} className="flex flex-wrap justify-between gap-2">
+            {state.month.rows.map((r) => <li key={r.provider + "/" + r.model} className="flex min-w-0 flex-wrap justify-between gap-2">
               <span className="break-all">{r.provider} / {r.model} · {r.calls} chamadas</span>
               <span className="tabular-nums">{money(r.usd)}</span>
             </li>)}
           </ul>}
-          {(state.month.unknownCalls > 0 || state.partial) && <p className="mt-3 text-xs text-amber-700 dark:text-amber-400" role="status">
+          {(state.month.unknownCalls > 0 || state.today.unknownCalls > 0 || state.partial) && <p className="mt-3 text-xs text-amber-700 dark:text-amber-400" role="status">
             {state.month.unknownCalls > 0 ? `${state.month.unknownCalls} chamadas sem preço/uso verificável no mês; total conhecido não representa o gasto completo. ` : ""}
-            {state.partial ? "Amostra limitada; total mensal incompleto." : ""}
+            {state.today.unknownCalls > 0 ? ` Hoje: ${state.today.unknownCalls} chamadas não precificadas.` : ""}\n            {state.partial ? "Amostra limitada; totais de hoje e do mês podem estar incompletos." : ""}
           </p>}
           <p className="mt-2 text-xs text-muted-foreground">Somente traces disponíveis. Totais históricos após expiração exigem agregação persistida.</p>
         </>
