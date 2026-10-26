@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 10
     services:
       postgres:
-        image: postgres:16
+        image: pgvector/pgvector:pg16
         env:
           POSTGRES_PASSWORD: test-only
           POSTGRES_DB: usage_ledger_test
