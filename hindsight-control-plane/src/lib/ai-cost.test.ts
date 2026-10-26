@@ -34,6 +34,14 @@ describe("estimateCost", () => {
     expect(result.pricedCalls).toBe(1);
     expect(result.knownUsd).toBeCloseTo(2.85);
   });
+  it("matches a namespaced model ID against an exact model name", () => {
+    const r = estimateCost(
+      [entry({ model: "org/test/model" })],
+      [{ ...rate, model: "model" }],
+      "memo.elus360",
+    );
+    expect(r.pricedCalls).toBe(1);
+  });
   it("rejects invalid token accounting", () => {
     expect(estimateCost([entry({ cached_tokens: 1_000_001 })], [rate]).unknownCalls).toBe(1);
   });
