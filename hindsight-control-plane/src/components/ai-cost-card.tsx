@@ -6,7 +6,9 @@ import { client, type LLMRequestEntry } from "@/lib/api";
 import { estimateCost, type CostSummary } from "@/lib/ai-cost";
 
 const PAGE_SIZE = 100;
-const MAX_ROWS = 5000;
+const MAX_ROWS = 1000;
+const MAX_PAGES = 10;
+const REQUEST_TIMEOUT_MS = 12_000;
 const money = (n: number) => new Intl.NumberFormat("pt-BR", {
   style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 6,
 }).format(n);
@@ -19,6 +21,7 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
+    const controller = new AbortController();
     setState(null);
     setError(false);
     const load = async () => {
@@ -32,8 +35,20 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
       let fetched = 0;
       const seen = new Set<string>();
       let offset = 0;
-      while (offset < MAX_ROWS) {
-        const response = await client.listLLMRequests(bankId, { start_date: month.toISOString(), limit: PAGE_SIZE, offset });
+      let pageCount = 0;
+      while (offset < MAX_ROWS && pageCount < MAX_PAGES) {
+        pageCount++;
+        const request = client.listLLMRequests(bankId, { start_date: month.toISOString(), limit: PAGE_SIZE, offset });
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeout = new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error("LLM_REQUESTS_TIMEOUT")), REQUEST_TIMEOUT_MS);
+        });
+        let response: Awaited<typeof request>;
+        try {
+          response = await Promise.race([request, timeout]);
+        } finally {
+          if (timer) clearTimeout(timer);
+        }
         for (const entry of response.items) {
           // Offset pages can overlap while new traces arrive; avoid billing an id twice.
           if (entry.bank_id === bankId && !seen.has(entry.id)) {
@@ -65,7 +80,7 @@ export function AiCostCard({ bankId, enabled }: { bankId: string; enabled: boole
         <h2 className="font-semibold text-foreground">Custo estimado de IA</h2>
         <span className="text-xs text-muted-foreground">USD · estimativa, não é fatura · UTC</span>
       </div>
-      {error ? <p className="text-sm text-muted-foreground">Não foi possível consultar o consumo.</p> :
+      {error ? <p className="text-sm text-muted-foreground">A consulta de consumo excedeu o tempo permitido ou falhou. Atualize a página para tentar novamente.</p> :
         !state ? <p className="text-sm text-muted-foreground" role="status">Calculando a partir das requisições registradas…</p> :
         <>
           <div className="grid gap-4 sm:grid-cols-2">
