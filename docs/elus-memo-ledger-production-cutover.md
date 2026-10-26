@@ -39,3 +39,18 @@ Documento de planejamento, **não autoriza** iniciar comandos de escrita no Post
 
 ### Gate de evidência antes do backup real
 Usar uma capacidade explicitamente autorizada de **leitura** do Docker endpoint 3, ou a interface Portainer, para obter apenas: ID/nome do contêiner da stack 12, labels, imagem/digest, status/health, mounts (tipo, origem nomeada/destino), modo read-write, versão do PostgreSQL embarcado, espaço livre e contagem de schemas/traces sem conteúdo. Não executar `docker cp`, comandos SQL de mutação, snapshot, `pg_dump`, restart ou redeploy enquanto não houver plano autorizado de backup seguro.
+
+## Diagnóstico do target Docker (26/10/2026)
+- MCP `host_status(wandora-agent)` e `host_status(wandora-prod)` = `wandora-vps-01`.
+- MCP `docker_list(wandora-agent)`: 7 contêineres disponíveis, nenhum `elus-memory`; `docker_list(wandora-prod)` = 0 (sem capability Docker autorizada). O endpoint Portainer `local` ID 3 pode estar no Docker Engine local ao Portainer ou em outro contexto; **não há prova de equivalência entre estes engines**.
+- Não conceder Docker socket global ao MCP, nem afrouxar allowlists. Primeiro validar nome/container IDs, Docker Engine ID, mounts e labels com comandos **somente leitura** no host do Portainer; depois restringir os nomes autorizados.
+- Comandos recomendados (no host correto, sem segredos):
+```bash
+hostname
+docker info --format 'Engine={{.Name}} Root={{.DockerRootDir}}'
+docker ps -a --format '{{.Names}}\t{{.Image}}\t{{.Status}}' | grep -Ei 'hindsight|elus|memo' || true
+docker ps -a --filter 'label=com.docker.compose.project=elus-memory' --format '{{.ID}} {{.Names}}'
+# Substituir CONTÊINER pela identificação confirmada, nunca pela stack 13 OAuth:
+docker inspect CONTÊINER --format '{{json .Mounts}}' | jq '[.[] | {Type,Name,Destination,RW}]'
+```
+- Não copiar `.pg0` enquanto PostgreSQL estiver em execução. Apenas depois de comprovar mounts, versão do banco, política de backup, controle de acesso, armazenamento seguro e isolamento de clone poderá ser autorizada uma operação de backup.
