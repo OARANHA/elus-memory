@@ -40,3 +40,40 @@ jobs:
         run: npm run lint --workspace=@vectorize-io/hindsight-control-plane
       - name: Unit tests
         run: npm run test --workspace=@vectorize-io/hindsight-control-plane
+
+  visual-canary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Install pinned repository dependencies
+        run: npm ci --ignore-scripts
+      - name: Install isolated browser runner
+        run: npm install --no-save --ignore-scripts --package-lock=false playwright@1.58.2
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Start isolated component preview
+        working-directory: hindsight-control-plane
+        run: |
+          npx vite --config canary/vite.config.ts > /tmp/elus-canary-vite.log 2>&1 &
+          for i in {1..45}; do
+            if curl -fsS http://127.0.0.1:4179/ > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat /tmp/elus-canary-vite.log
+          exit 1
+      - name: Browser gate with deterministic data
+        working-directory: hindsight-control-plane
+        run: node canary/visual-gate.mjs
+      - name: Upload desktop and mobile evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: elus-memo-visual-canary
+          path: hindsight-control-plane/canary-evidence/*.png
+          if-no-files-found: warn
+          retention-days: 14
