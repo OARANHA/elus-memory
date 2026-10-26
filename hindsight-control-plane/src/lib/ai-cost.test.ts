@@ -48,6 +48,16 @@ describe("estimateCost", () => {
     const r = estimateCost([entry({ model: "org/test/model", cached_tokens: 0 })], [short, exact]);
     expect(r.inputUsd).toBe(3);
   });
+  it("explains missing tariffs and missing token usage without inventing costs", () => {
+    const result = estimateCost([
+      entry({ model: "unknown", id: "unpriced" }),
+      entry({ model: "test/model", input_tokens: null, id: "missing" }),
+    ], [rate]);
+    expect(result.pricedCalls).toBe(0);
+    expect(result.unknownCalls).toBe(2);
+    expect(result.unknownReasons.map((r) => r.reason)).toContain("Sem tarifa cadastrada");
+    expect(result.unknownReasons.map((r) => r.reason)).toContain("Tokens ausentes");
+  });
   it("rejects invalid token accounting", () => {
     expect(estimateCost([entry({ cached_tokens: 1_000_001 })], [rate]).unknownCalls).toBe(1);
   });
