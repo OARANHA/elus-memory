@@ -9908,6 +9908,51 @@ def _register_routes(app: FastAPI):
             raise _internal_error(e, f"GET /v1/default/banks/{bank_id}/audit-logs/{log_id}")
 
     @app.get(
+        "/v1/default/banks/{bank_id}/elus-usage-ledger",
+        summary="ELUS persistent usage history (aggregate only)",
+        tags=["LLM Traces"],
+        responses=_BANK_NOT_FOUND_RESPONSES,
+    )
+    async def api_elus_usage_ledger(
+        bank_id: str,
+        start_date: str = Query(..., description="Inclusive UTC ISO datetime"),
+        end_date: str = Query(..., description="Exclusive UTC ISO datetime"),
+        request_context: RequestContext = Depends(get_request_context),
+    ):
+        """Read durable metering with the identical Hindsight bank-wide auth gates."""
+        from ..engine.elus_usage_ledger import aggregate_usage_ledger, validate_usage_window
+        from ..engine.db_utils import acquire_with_retry
+        from ..engine.schema import _is_oracle
+
+        start = _parse_iso_datetime(start_date, "start_date")
+        end = _parse_iso_datetime(end_date, "end_date")
+        try:
+            validate_usage_window(start, end)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+        try:
+            if await app.state.memory.get_bank_profile(bank_id, request_context=request_context) is None:
+                raise HTTPException(status_code=404, detail="Bank not found")
+            await app.state.memory._refuse_bank_wide_if_scoped(
+                bank_id, request_context, "read the bank's persistent usage history"
+            )
+            if _is_oracle():
+                raise HTTPException(status_code=501, detail="Usage ledger requires PostgreSQL")
+            backend = await app.state.memory._get_backend()
+            async with acquire_with_retry(backend) as conn:
+                result = await aggregate_usage_ledger(
+                    conn, bank_id=bank_id, start=start, end=end
+                )
+            return result
+        except OperationValidationError as e:
+            raise HTTPException(status_code=e.status_code, detail=e.reason)
+        except (AuthenticationError, HTTPException):
+            raise
+        except Exception as e:
+            raise _internal_error(e, "GET /v1/default/banks/{bank_id}/elus-usage-ledger")
+
+    @app.get(
         "/v1/default/banks/{bank_id}/llm-requests",
         summary="List LLM request traces",
         description="List traced LLM requests for a bank, ordered by most recent first. "
