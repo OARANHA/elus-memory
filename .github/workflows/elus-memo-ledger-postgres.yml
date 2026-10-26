@@ -47,6 +47,10 @@ jobs:
         env:
           HINDSIGHT_API_DATABASE_URL: postgresql://postgres:test-only@127.0.0.1:5432/usage_ledger_test
         run: python3 deploy/elus/tests/test_alembic_command.py
+      - name: Full Hindsight Alembic chain from empty schema
+        env:
+          HINDSIGHT_API_DATABASE_URL: postgresql://postgres:test-only@127.0.0.1:5432/usage_ledger_test
+        run: python3 deploy/elus/tests/test_alembic_full_chain.py
       - name: Real PostgreSQL transactional ledger smoke
         env:
           PGPASSWORD: test-only
