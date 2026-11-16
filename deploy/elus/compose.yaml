@@ -2,6 +2,7 @@
 services:
   hindsight:
     image: ${HINDSIGHT_IMAGE:-ghcr.io/vectorize-io/hindsight:latest}
+    shm_size: "1gb"
     restart: unless-stopped
     environment:
       HINDSIGHT_API_LLM_PROVIDER: ${HINDSIGHT_API_LLM_PROVIDER:-openai}
